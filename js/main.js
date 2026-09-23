@@ -1,8 +1,9 @@
 /* ---------- engine ---------- */
 const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
 const stage=$('#stage');
-function fit(){const s=Math.min(innerWidth/1920,innerHeight/1080);stage.style.transform=`scale(${s})`;stage.dataset.scale=s;}
-addEventListener('resize',fit);fit();
+// Scale the 1920x1080 stage to fit the window, leaving room for the control bar when it's visible.
+function fit(){const ctl=$('#ctl'),res=ctl&&!ctl.classList.contains('hide')?ctl.offsetHeight+28:0;$('#wrap').style.bottom=res+'px';const s=Math.min(innerWidth/1920,(innerHeight-res)/1080);stage.style.transform=`scale(${s})`;stage.dataset.scale=s;}
+addEventListener('resize',fit);addEventListener('DOMContentLoaded',fit);fit();
 
 let speed=1, paused=true, runToken=0, started=false;
 const FOSLOGO='assets/financeos-badge.png';
@@ -294,5 +295,5 @@ $('#restart').onclick=()=>{runToken++;started=false;paused=true;$('#play').textC
 $('#speed').onchange=e=>speed=+e.target.value;
 $('#capchk').onchange=e=>$('#cap').classList.toggle('hidden',!e.target.checked);
 $('#cap').classList.add('hidden');
-{const q=new URLSearchParams(location.search);if(q.get('speed')){speed=+q.get('speed');$('#speed').value=q.get('speed')}if(q.get('rec')){$('#ctl').classList.add('hide');stage.classList.add('recording')}if(q.get('cap'))$('#cap').classList.remove('hidden');if(q.get('anim')){const r=+q.get('anim');setInterval(()=>{for(const an of document.getAnimations()){if(an.playbackRate!==r)an.playbackRate=r;}},25);}if(q.get('auto'))setTimeout(start,600);}
-addEventListener('keydown',e=>{if(e.code==='Space'){e.preventDefault();$('#play').click()}if(e.key==='r'||e.key==='R')$('#restart').click();if(e.key==='h'||e.key==='H'){$('#ctl').classList.toggle('hide');stage.classList.toggle('recording')}});
+{const q=new URLSearchParams(location.search);if(q.get('speed')){speed=+q.get('speed');$('#speed').value=q.get('speed')}if(q.get('rec')){$('#ctl').classList.add('hide');stage.classList.add('recording');fit()}if(q.get('cap'))$('#cap').classList.remove('hidden');if(q.get('anim')){const r=+q.get('anim');setInterval(()=>{for(const an of document.getAnimations()){if(an.playbackRate!==r)an.playbackRate=r;}},25);}if(q.get('auto'))setTimeout(start,600);}
+addEventListener('keydown',e=>{if(e.code==='Space'){e.preventDefault();$('#play').click()}if(e.key==='r'||e.key==='R')$('#restart').click();if(e.key==='h'||e.key==='H'){$('#ctl').classList.toggle('hide');stage.classList.toggle('recording');fit()}});
