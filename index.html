@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Claude vs Claude + FinanceOS — animation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&family=Lora:ital@0;1&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+<div id="wrap">
+<div id="stage">
+  <div class="panel off" id="L">
+    <div class="plabel"><span class="dot"></span><img class="cl" src="assets/claude-logo.png" alt="Claude"></div>
+    <div class="win">
+      <div class="topbar">
+        <div class="chip"><svg viewBox="0 0 24 24" fill="none" stroke="#d97757" stroke-width="2.4" stroke-linecap="round"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/></svg>Claude</div>
+        <div class="right"><div class="btn share">Share<div class="tip">Link copied to clipboard</div></div><div class="acct">AM</div></div>
+      </div>
+      <div class="conn"></div>
+      <div class="msgs"><div class="greet">Good afternoon</div></div>
+      <div class="composer"><div class="ta"></div><div class="row"><div class="lft"><div class="plus">+</div><span>Claude</span></div><div class="send"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg></div></div></div>
+      <div class="excel"></div>
+      <div class="card"></div>
+    </div>
+    <div class="stamp">00:00</div>
+    <div class="tok"><b>0</b> tokens</div>
+  </div>
+
+  <div class="panel off" id="R">
+    <div class="plabel"><span class="dot"></span><img class="cl" src="assets/claude-logo.png" alt="Claude"><span class="plus">+</span><img src="assets/financeos-wordmark.png" alt="FinanceOS"></div>
+    <div class="win">
+      <div class="topbar">
+        <div class="chip"><svg viewBox="0 0 24 24" fill="none" stroke="#d97757" stroke-width="2.4" stroke-linecap="round"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/></svg>Claude</div>
+        <div class="right"><span class="acctname">a.morgan</span><div class="acct">AM</div></div>
+      </div>
+      <div class="conn"><img src="assets/financeos-badge.png" alt="FinanceOS"><span class="pip"></span>Connector on</div>
+      <div class="msgs"><div class="greet">Good afternoon</div></div>
+      <div class="composer"><div class="ta"></div><div class="row"><div class="lft"><div class="plus">+</div><span>Claude</span></div><div class="send"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg></div></div></div>
+      <div class="excel"></div>
+      <div class="pop"><h6>Connectors</h6>
+        <div class="rw fos"><div class="lft"><img src="assets/financeos-badge.png" alt="FinanceOS">FinanceOS Connector</div><div class="sw"></div></div>
+        <div class="rw"><div class="lft"><span class="ico" id="ico-gd"><img src="assets/google-drive.png" alt="Google Drive"></span>Google Drive</div><div class="sw"></div></div>
+        <div class="rw"><div class="lft"><span class="ico" id="ico-sl"><img src="assets/slack.png" alt="Slack"></span>Slack</div><div class="sw"></div></div>
+      </div>
+      <div class="lineage">
+        <div class="brand"><img src="assets/financeos-badge.png" alt="FinanceOS" style="height:26px">&middot; Lineage</div>
+        <h4>Gross margin, Vandelay DE, Q3 FY26</h4>
+        <div class="big">54.3%</div>
+        <div class="def">Metric definition: (Revenue &minus; COGS) / Revenue. Excludes implementation services (opex).</div>
+        <ul>
+          <li>Revenue: $4,180,000 <span>&mdash; accounts 4000&ndash;4090</span></li>
+          <li>COGS: $1,910,000 <span>&mdash; accounts 5000&ndash;5090</span></li>
+          <li>Source: NetSuite GL, Vandelay DE <span>&mdash; 2026-07-01 to 2026-09-30</span></li>
+          <li id="fxline">FX: EUR&rarr;USD, Q3 average <b>1.0842</b></li>
+          <li>Plan: FY26 Plan v3 <span>&mdash; approved 2026-01-14</span></li>
+        </ul>
+        <div class="foot">Every figure traces back to its source system.</div>
+      </div>
+      <div class="card"></div>
+    </div>
+    <div class="tok"><b>0</b> tokens</div>
+  </div>
+
+  <div class="ov" id="dim"></div>
+  <div class="ov" id="drift"><div class="driftbox">
+    <div class="col"><h5>Claude</h5><div class="v"><small>Vandelay UK</small>59.6%</div><div class="v"><small>Vandelay DE</small>52.8%</div></div>
+    <div class="vs">vs</div>
+    <div class="col r"><h5>Claude + FinanceOS</h5><div class="v"><small>Vandelay UK</small>58.9%</div><div class="v"><small>Vandelay DE</small>54.3%</div></div>
+  </div></div>
+  <div class="ov" id="hood"><div class="hd">
+    <div class="hcol" id="hL"><h5>Claude on its own</h5><div class="flow"><div class="hnode files" id="hL1"><span>Q3_GL_export_NetSuite.xlsx</span><span>Q3_GL_export_SAP_DE_AU.xlsx</span><span>Q3_bookings_Salesforce.csv</span><span>FY26_Plan_v2.xlsx</span></div><div class="harrow" id="hL2"></div><div class="hnode claude" id="hL3"><img src="assets/claude-logo.png" alt="Claude"></div></div><div class="note" id="hLn">Files in. Whatever was exported that day.</div></div>
+    <div class="hcol" id="hR"><h5>Claude + FinanceOS</h5><div class="flow"><div class="hnode src" id="hR1"><span>NetSuite</span><span>SAP</span><span>Salesforce</span><span>Excel</span></div><div class="harrow y" id="hR2"></div><div class="hnode fos" id="hR3"><img style="margin:0 auto 2px" src="assets/financeos-badge.png" alt="FinanceOS"><div class="row"><i></i><div><b>Consolidated data</b><span>ERP, CRM and spreadsheets in one governed, always-current dataset</span></div></div><div class="row"><i></i><div><b>Semantic layer</b><span>Your metric definitions, mappings and financial logic</span></div></div><div class="row"><i></i><div><b>Governance</b><span>Permissions, access controls and lineage on every query</span></div></div></div><div class="harrow y" id="hR4"></div><div class="hnode" id="hR5" style="font-size:12px;color:var(--dr-muted);padding:10px 12px">FinanceOS<br>Connector</div><div class="harrow y" id="hR6"></div><div class="hnode claude" id="hR7"><img src="assets/claude-logo.png" alt="Claude"></div></div><div class="note" id="hRn">One governed layer underneath every answer.</div></div>
+  </div></div>
+  <div class="ov" id="tokens"><div class="pct"><b id="pctN">0%</b><span>fewer tokens<br>with FinanceOS</span></div><div class="tk">
+    <div class="tkbox l"><h5>Claude</h5><div class="n"><span id="tkL">0</span><small>tokens</small></div><div class="bar"><i></i></div><p>6 files re-sent &middot; 5 explanations re-typed</p></div>
+    <div class="tkbox r"><h5>Claude + FinanceOS</h5><div class="n"><span id="tkR">0</span><small>tokens</small></div><div class="bar"><i></i></div><p>Data and logic reused from FinanceOS</p></div>
+  </div><div class="tkfoot"><span class="t1">Token counts are estimates produced by Claude, not measured usage.</span><span class="t2">Basis: text at about 4 characters per token; uploaded files at 20 tokens per row from the row counts shown on each file; connector definitions counted once and each connector result at its approximate size.</span></div></div>
+  <div class="ov" id="end"><div class="in"><h1>Same AI.<br>Better results.</h1><p>Claude builds it once. FinanceOS makes it repeatable, governed, and traceable.</p><div class="logo"><img class="dr" src="assets/datarails-logo.svg" alt="Datarails"><span class="sep"></span><img class="fos" src="assets/financeos-wordmark.png" alt="FinanceOS"></div></div></div>
+  <div id="intro"><div class="ln" id="in1"></div><div class="ln sub" id="in2"></div></div>
+  <div id="cap"><span></span></div>
+  <svg id="cur" viewBox="0 0 26 36"><path d="M2 2l20 15-8 1 5 11-4 2-5-11-6 6z" fill="#fff" stroke="#222" stroke-width="2" stroke-linejoin="round"/></svg>
+</div>
+</div>
+
+<div id="ctl">
+  <button id="play">Play</button>
+  <button id="restart">Restart</button>
+  <select id="speed"><option value="0.75">0.75x</option><option value="1" selected>1x</option><option value="1.5">1.5x</option><option value="2">2x</option></select>
+  <label><input type="checkbox" id="capchk"> VO captions</label>
+  <span class="beat" id="beatlbl">Ready</span>
+  <span style="color:#777">Space play/pause &middot; R restart &middot; H hide bar</span>
+</div>
+
+<script src="js/main.js"></script>
+</body>
+</html>
