@@ -393,3 +393,29 @@ table.t tr.hl.good td{background:#e3f5e8}
 .audit .au{font-weight:600;color:var(--c-ink)}
 .audit .aq{font-family:Consolas,Menlo,monospace;font-size:12px;color:var(--c-ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .audit .as{font-size:12px;color:#1b5e20}
+
+/* chapter jump: hide the fast-forward behind a card, with no transitions */
+#stage.seeking *{transition:none!important;animation:none!important}
+#seekov{position:absolute;inset:0;z-index:60;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:var(--dr-navy);font-family:Poppins,sans-serif;color:#fff;opacity:0;pointer-events:none;transition:opacity .45s cubic-bezier(.2,.8,.2,1)}
+#seekov span{font-size:22px;color:var(--dr-muted)}
+#seekov b{font-size:56px;font-weight:600;letter-spacing:-.03em}
+#stage.seeking #seekov{opacity:1}
+
+/* chapter menu: slim handle on the left edge, opens on hover */
+#chap{position:fixed;left:0;top:50%;transform:translateY(-50%);z-index:101;display:flex;align-items:center;font-family:Poppins,sans-serif;transition:opacity .3s}
+#chap.hide{opacity:0;pointer-events:none}
+#chap .handle{display:flex;flex-direction:column;align-items:center;gap:10px;padding:14px 8px;background:var(--dr-navy);border:1px solid var(--dr-line);border-left:0;border-radius:0 14px 14px 0;color:var(--dr-muted);cursor:pointer;box-shadow:0 12px 30px rgba(0,0,0,.35);transition:color .2s}
+#chap .handle svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round}
+#chap .handle span{writing-mode:vertical-rl;transform:rotate(180deg);font-size:12px;font-weight:600;letter-spacing:.02em}
+#chap .panel-in{position:absolute;left:0;top:50%;width:300px;max-height:calc(100vh - 32px);overflow:auto;box-sizing:border-box;padding:18px 12px 14px;background:var(--dr-navy);border:1px solid var(--dr-line);border-left:0;border-radius:0 18px 18px 0;box-shadow:0 30px 80px rgba(0,0,0,.5);transform:translate(-102%,-50%);transition:transform .3s cubic-bezier(.2,.8,.2,1)}
+#chap:hover .panel-in,#chap:focus-within .panel-in,#chap.open .panel-in{transform:translate(0,-50%)}
+#chap:hover .handle,#chap:focus-within .handle,#chap.open .handle{color:#fff}
+#chap h6{margin:0 10px 10px;font-size:13px;font-weight:600;color:var(--dr-muted);letter-spacing:0}
+#chap ol{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
+#chap li button{width:100%;display:flex;align-items:center;gap:12px;padding:9px 10px;border:0;border-radius:10px;background:transparent;color:#D7DAE6;font:400 14px/1.2 Poppins,sans-serif;text-align:left;cursor:pointer;transition:background .15s,color .15s}
+#chap li button:hover{background:var(--dr-navy-soft);color:#fff}
+#chap li button:focus-visible{outline:2px solid #fff;outline-offset:-2px}
+#chap li .n{flex:none;width:26px;height:26px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:var(--dr-muted);border:1px solid var(--dr-line);font-variant-numeric:tabular-nums}
+#chap li.done button{color:var(--dr-muted)}
+#chap li.on button{background:var(--dr-navy-soft);color:#fff;font-weight:600}
+#chap li.on .n{background:var(--dr-yellow);border-color:var(--dr-yellow);color:var(--dr-navy)}

@@ -9,11 +9,20 @@ let speed=1, paused=true, runToken=0, started=false;
 const FOSLOGO='assets/financeos-badge.png';
 // Virtual clock: advances only while playing, scaled by speed. All script timing (sleep, untilV) runs on it.
 let beatT0=0,vAcc=0,vLast=performance.now();
-function vtick(){const n=performance.now();if(!paused)vAcc+=(n-vLast)*speed;vLast=n;}
+function vtick(){const n=performance.now();if(!paused&&!seeking)vAcc+=(n-vLast)*speed;vLast=n;}
 function vnow(){vtick();return vAcc;}
 function setPaused(p){vtick();paused=p;playUI();voSync();}
 function setSpeed(v){vtick();speed=v;$$('#speed button').forEach(b=>b.classList.toggle('on',+b.dataset.v===v));voSync();}
-const sleep=ms=>new Promise(r=>{const end=vnow()+ms;const step=()=>{const rem=end-vnow();if(rem<=0){r();return}setTimeout(step,paused?60:Math.min(rem/speed,250))};step();});
+// Every sleep has an absolute virtual end time and belongs to the run that created it; a restart rejects stale sleeps.
+// While seeking (chapter jump), sleeps go into a queue that is drained in virtual-time order as fast as possible.
+let seeking=null;const seekQ=[];
+const seekCh=new MessageChannel();seekCh.port1.onmessage=pumpSeek;
+function pumpSeek(){if(!seeking||!seekQ.length)return;seekQ.sort((a,b)=>a.end-b.end);const it=seekQ.shift();if(it.tok!==runToken){it.rej(new Error('restart'))}else{vAcc=Math.max(vAcc,it.end);it.r();}seekCh.port2.postMessage(0);}
+function waitReal(it){const step=()=>{if(it.tok!==runToken){it.rej(new Error('restart'));return}const rem=it.end-vnow();if(rem<=0){it.r();return}setTimeout(step,paused?60:Math.min(rem/speed,250))};step();}
+const sleep=ms=>new Promise((r,rej)=>{const it={end:vnow()+ms,r,rej,tok:runToken};if(seeking){seekQ.push(it);seekCh.port2.postMessage(0);}else waitReal(it);});
+// Tween fn(eased 0..1) over ms of virtual time.
+const tween=(ms,fn)=>new Promise(res=>{const t0=vnow();const st=()=>{const k=seeking?1:Math.min(1,(vnow()-t0)/ms);fn(1-Math.pow(1-k,3));if(k<1)requestAnimationFrame(st);else res();};st();});
+addEventListener('unhandledrejection',e=>{if(e.reason&&e.reason.message==='restart')e.preventDefault();});
 function focus(side){P.L.classList.toggle('dim',side==='R');P.R.classList.toggle('dim',side==='L');}
 async function untilV(ms){const rem=beatT0+ms-vnow();if(rem>0)await sleep(rem);}
 function guard(tok){if(tok!==runToken)throw new Error('restart')}
@@ -21,8 +30,9 @@ function guard(tok){if(tok!==runToken)throw new Error('restart')}
 const P={L:$('#L'),R:$('#R')};
 const tokens={L:0,R:0};
 function addTok(side,n){tokens[side]+=n;P[side].querySelector('.tok b').textContent=tokens[side].toLocaleString();}
-let stampT=0,stampOn=false;
-setInterval(()=>{if(stampOn&&!paused){stampT+=0.25*speed;const m=String(Math.floor(stampT/60)).padStart(2,'0'),s=String(Math.floor(stampT%60)).padStart(2,'0');$('#L .stamp').textContent=`${m}:${s}`}},250);
+let stampT=0,stampOn=false,stampV0=0;
+function stampShow(){stampT=(vnow()-stampV0)/1000;const m=String(Math.floor(stampT/60)).padStart(2,'0'),s=String(Math.floor(stampT%60)).padStart(2,'0');$('#L .stamp').textContent=`${m}:${s}`}
+setInterval(()=>{if(stampOn)stampShow()},250);
 
 const cur=$('#cur');
 function moveCursorTo(el,dx=0,dy=0){
@@ -83,7 +93,11 @@ const CHAPTERS=[['0|Opening','Intro'],['2|Turn on the connector','Connecting Fin
   ['5|Context','Defining the Terms'],['6|The drift','Tracing the Numbers'],['7|Repeatability + Excel','Building the CFO Pack'],
   ['7b|Refresh','Next Month'],['8|Control','Permissions and Audit'],['9|Cost efficiency','Token Cost'],['10|Close','Wrap-Up']];
 let chIdx=-1;
-function chapter(key){const i=CHAPTERS.findIndex(c=>c[0]===key);if(i<0)return;chIdx=i;$('#beatlbl').textContent=CHAPTERS[i][1];}
+function chapUI(){$$('#chap li').forEach((li,i)=>{li.classList.toggle('on',i===chIdx);li.classList.toggle('done',chIdx>=0&&i<chIdx);});}
+function buildChap(){$('#chap ol').innerHTML=CHAPTERS.map(([k,n],i)=>`<li><button data-k="${k}"><span class="n">${String(i+1).padStart(2,'0')}</span><span class="t">${n}</span></button></li>`).join('');
+  $$('#chap button').forEach(b=>b.onclick=()=>{jumpTo(b.dataset.k);$('#chap').classList.remove('open');b.blur();});
+  $('#chap .handle').onclick=()=>$('#chap').classList.toggle('open');}
+function chapter(key){const i=CHAPTERS.findIndex(c=>c[0]===key);if(i<0)return;chIdx=i;$('#beatlbl').textContent=CHAPTERS[i][1];chapUI();if(seeking&&seeking===key)endSeek();}
 function beat(n,t){beatT0=vnow();chapter(`${n}|${t}`);vo(`${n}|${t}`);}
 
 /* narration: one clip per beat, started when the beat starts (keys are `${n}|${label}`) */
@@ -94,7 +108,7 @@ const VO={'0|Opening':'VO_00_opening','2|Turn on the connector':'VO_01_beat2a_co
 const VO_REV=2; // bump after editing any clip so browsers don't play a cached copy
 let voOn=true,voCur=null;
 function voStop(){if(voCur){voCur.pause();voCur=null;}}
-function vo(key){const f=VO[key];if(!f)return;voStop();if(!voOn)return;const a=new Audio(`audio/${f}_Despina_v2.wav?v=${VO_REV}`);a.preservesPitch=true;a.playbackRate=speed;voCur=a;if(!paused)a.play().catch(()=>{});}
+function vo(key){const f=VO[key];if(!f)return;voStop();if(!voOn||seeking)return;const a=new Audio(`audio/${f}_Despina_v2.wav?v=${VO_REV}`);a.preservesPitch=true;a.playbackRate=speed;voCur=a;if(!paused)a.play().catch(()=>{});}
 function voSync(){if(!voCur)return;voCur.playbackRate=speed;if(paused||!voOn)voCur.pause();else if(!voCur.ended)voCur.play().catch(()=>{});}
 
 /* excel */
@@ -165,10 +179,10 @@ let leftTable2=null,rightTable=null;
 async function run(tok){
   const L='L',R='R';
   // reset
-  for(const s of [L,R]){P[s].querySelector('.msgs').innerHTML='<div class="greet">Good afternoon</div>';P[s].querySelector('.ta').textContent='';P[s].querySelector('.excel').className='excel';P[s].querySelector('.card').className='card';tokens[s]=0;addTok(s,0);}
+  for(const s of [L,R]){P[s].querySelector('.msgs').innerHTML='<div class="greet">Good afternoon</div>';P[s].querySelector('.ta').textContent='';const ex=P[s].querySelector('.excel');ex.className='excel';ex.innerHTML='';delete ex.dataset.sheet;const cd=P[s].querySelector('.card');cd.className='card';cd.innerHTML='';tokens[s]=0;addTok(s,0);}
   $('#R .lineage').classList.remove('open');$$('#R .lineage li').forEach(l=>l.classList.remove('in','hl'));
   $$('.ov').forEach(o=>o.classList.remove('on'));$('#L .share').classList.remove('hover','press');$('#L .tip').classList.remove('on');
-  $('#R .conn').classList.remove('on');$('#R .pop').classList.remove('on');$('#R .pop .sw').classList.remove('on');toolDefsCounted={L:false,R:false};$('#R .acctname').textContent='a.morgan';$('#R .acct').textContent='AM';$('#L .acct').textContent='AM';$('#intro').classList.remove('on');focus(null);P.L.classList.add('off');P.R.classList.add('off');P.L.style.opacity='';P.L.style.transition='';stampT=0;stampOn=false;$('#L .stamp').textContent='00:00';hideCursor();caption('');
+  $('#R .conn').classList.remove('on');$('#R .pop').classList.remove('on');$('#R .pop .sw').classList.remove('on');toolDefsCounted={L:false,R:false};$('#R .acctname').textContent='a.morgan';$('#R .acct').textContent='AM';$('#R .acctname').style.opacity='';$('#R .acct').style.opacity='';$('#tkL').textContent='0';$('#tkR').textContent='0';$('#pctN').textContent='0%';$$('#stage .cursorblink').forEach(x=>x.classList.remove('cursorblink'));$$('#stage .hover,#stage .press').forEach(x=>x.classList.remove('hover','press'));$$('#stage .send.on').forEach(x=>x.classList.remove('on'));cur.classList.remove('click');$$('#hood .in').forEach(x=>x.classList.remove('in'));$('#L .acct').textContent='AM';$('#intro').classList.remove('on');focus(null);P.L.classList.add('off');P.R.classList.add('off');P.L.style.opacity='';P.L.style.transition='';stampT=0;stampOn=false;$('#L .stamp').textContent='00:00';hideCursor();caption('');
   $('#tokens .bar i').style.width='0';$$('#tokens .bar i')[1].style.width='0';
 
   vAcc=0;vLast=performance.now();
@@ -210,7 +224,7 @@ async function run(tok){
 
   // BEAT 3
   beat(3,'Data access');guard(tok);caption("On the left, Claude's first move is to ask for your files. So you're back in the exports folder: NetSuite, SAP, Salesforce, the plan, hoping every one of them is current. Over on the right, it's already pulling from both ERPs, the CRM and the approved plan. Nothing to hand over.");
-  stampOn=true;
+  stampOn=true;stampV0=vnow();
   let toolB3=null;const rightB3=async()=>{await sleep(900);const b=newAssistant(R);toolB3=tool(b,R,'gross_margin_pct &middot; by entity &middot; Q3 FY26 &middot; Actual vs Plan');await sleep(900);await stream(b,R,'Pulling Q3 actuals and FY26 plan from FinanceOS.',12);line(b,R,'status','Sources: NetSuite &middot; SAP &middot; Salesforce &middot; FY26 Plan (v3, approved)');};
   const leftB3=async()=>{await sleep(700);const b=newAssistant(L);await stream(b,L,"I don't have access to your financial systems. Please upload the Q3 actuals and the plan, and let me know which entities to include.");await sleep(1400);await files(L,['Q3_GL_export_NetSuite.xlsx','Q3_GL_export_SAP_DE_AU.xlsx','Q3_bookings_Salesforce.csv','FY26_Plan_v2.xlsx','Q3_GL_export_NetSuite (1).xlsx'],750);};
   focus('L');await leftB3();await untilV(13200);focus('R');await rightB3();await untilV(20200);focus(null);guard(tok);caption('');await sleep(250);
@@ -309,13 +323,13 @@ async function run(tok){
   focus('L');const rB8=rightB8();await leftB8();await untilV(complianceRight-400);P[L].querySelector('.card').classList.remove('on');focus('R');await rB8;await untilV(complianceEnd);P[L].querySelector('.card').className='card';focus(null);guard(tok);caption('');hideCursor();await sleep(300);
 
   // BEAT 9
-  beat(9,'Cost efficiency');guard(tok);stampOn=false;
+  beat(9,'Cost efficiency');guard(tok);stampShow();stampOn=false;
   $('#dim').classList.add('on');await sleep(500);
   const tl=tokens.L,tr=tokens.R;$('#tokens').classList.add('on');
   caption("All that re-uploading and re-explaining on the left costs tokens, and it costs your afternoon. On the right, the data and the logic are already in place, so Claude isn't rebuilding the world with every prompt.");
-  const bars=$$('#tokens .bar i');setTimeout(()=>{bars[0].style.width='100%';bars[1].style.width=Math.max(6,Math.round(tr/tl*100))+'%'},300);$('#tokens .pct').classList.remove('in');$('#pctN').textContent='0%';
-  const t0=performance.now();await new Promise(res=>{const st=()=>{const k=Math.min(1,(performance.now()-t0)/(1800/speed));const e=1-Math.pow(1-k,3);$('#tkL').textContent=Math.round(tl*e).toLocaleString();$('#tkR').textContent=Math.round(tr*e).toLocaleString();if(k<1)requestAnimationFrame(st);else res();};st();});
-  {const pct=Math.round((1-tr/tl)*100);await untilV(6500);$('#tokens .pct').classList.add('in');const p0=performance.now();await new Promise(res=>{const st=()=>{const k=Math.min(1,(performance.now()-p0)/(1400/speed));const e=1-Math.pow(1-k,3);$('#pctN').textContent='−'+Math.round(pct*e)+'%';if(k<1)requestAnimationFrame(st);else res();};st();});}
+  const bars=$$('#tokens .bar i');sleep(300).then(()=>{bars[0].style.width='100%';bars[1].style.width=Math.max(6,Math.round(tr/tl*100))+'%'},()=>{});$('#tokens .pct').classList.remove('in');$('#pctN').textContent='0%';
+  await tween(1800,e=>{$('#tkL').textContent=Math.round(tl*e).toLocaleString();$('#tkR').textContent=Math.round(tr*e).toLocaleString();});
+  {const pct=Math.round((1-tr/tl)*100);await untilV(6500);$('#tokens .pct').classList.add('in');await tween(1400,e=>{$('#pctN').textContent='−'+Math.round(pct*e)+'%';});}
   await untilV(13700);guard(tok);caption('');$('#tokens').classList.remove('on');$('#tokens .pct').classList.remove('in');await sleep(500);
 
   // BEAT 10
@@ -324,18 +338,22 @@ async function run(tok){
   P[L].style.transition='opacity .8s';P[L].style.opacity='0';
   caption('Same AI. Different foundation.');await sleep(2400);caption('');
   $('#end').classList.add('on');await sleep(500);
-  $('#beatlbl').textContent='Complete';chIdx=-1;
+  $('#beatlbl').textContent='Complete';chIdx=-1;$$('#chap li').forEach(li=>{li.classList.remove('on');li.classList.add('done')});
   started=false;setPaused(true);
 }
 
 /* ---------- controls ---------- */
 function playUI(){const on=started&&!paused;$('#play').classList.toggle('playing',on);$('#playlbl').textContent=on?'Pause':'Play';$('#play').setAttribute('aria-label',on?'Pause':'Play');}
-function start(){runToken++;const tok=runToken;started=true;setPaused(false);run(tok).catch(e=>{if(e.message!=='restart')console.error(e)});}
+function start(target){runToken++;const tok=runToken;seekQ.length=0;started=true;
+  if(target&&target!==CHAPTERS[0][0]){vtick();seeking=target;stage.classList.add('seeking');$('#seekname').textContent=CHAPTERS.find(c=>c[0]===target)[1];}else endSeek(true);
+  setPaused(false);run(tok).catch(e=>{if(e.message!=='restart')console.error(e)});}
+function endSeek(quiet){const was=seeking;seeking=null;vLast=performance.now();const q=seekQ.splice(0);q.forEach(waitReal);if(was||quiet){void stage.offsetWidth;stage.classList.remove('seeking');}} // flush styles with transitions off, then re-enable them
+function jumpTo(key){voStop();runToken++;started=false;$('#end').classList.remove('on');start(key);}
 $('#play').onclick=()=>{if(!started){start();return}setPaused(!paused);};
-$('#restart').onclick=()=>{voStop();runToken++;started=false;setPaused(true);$('#end').classList.remove('on');setTimeout(start,50);};
+$('#restart').onclick=()=>jumpTo(CHAPTERS[0][0]);
 $$('#speed button').forEach(b=>b.onclick=()=>setSpeed(+b.dataset.v));
 $('#vochk').onchange=e=>{voOn=e.target.checked;voSync();};
 $('#capchk').onchange=e=>$('#cap').classList.toggle('hidden',!e.target.checked);
-$('#cap').classList.add('hidden');
-{const q=new URLSearchParams(location.search);if(q.get('speed'))setSpeed(+q.get('speed'));if(q.get('rec')){$('#ctl').classList.add('hide');stage.classList.add('recording');fit()}if(q.get('cap'))$('#cap').classList.remove('hidden');if(q.get('vo')==='0'){voOn=false;$('#vochk').checked=false;}if(q.get('anim')){const r=+q.get('anim');setInterval(()=>{for(const an of document.getAnimations()){if(an.playbackRate!==r)an.playbackRate=r;}},25);}if(q.get('auto'))setTimeout(start,600);}
-addEventListener('keydown',e=>{if(e.code==='Space'){e.preventDefault();$('#play').click()}if(e.key==='r'||e.key==='R')$('#restart').click();if(e.key==='h'||e.key==='H'){$('#ctl').classList.toggle('hide');stage.classList.toggle('recording');fit()}});
+$('#cap').classList.add('hidden');buildChap();
+{const q=new URLSearchParams(location.search);if(q.get('speed'))setSpeed(+q.get('speed'));if(q.get('rec')){$('#ctl').classList.add('hide');$('#chap').classList.add('hide');stage.classList.add('recording');fit()}if(q.get('cap'))$('#cap').classList.remove('hidden');if(q.get('vo')==='0'){voOn=false;$('#vochk').checked=false;}if(q.get('anim')){const r=+q.get('anim');setInterval(()=>{for(const an of document.getAnimations()){if(an.playbackRate!==r)an.playbackRate=r;}},25);}if(q.get('auto'))setTimeout(start,600);}
+addEventListener('keydown',e=>{if(e.code==='Space'){e.preventDefault();$('#play').click()}if(e.key==='r'||e.key==='R')$('#restart').click();if(e.key==='h'||e.key==='H'){$('#ctl').classList.toggle('hide');$('#chap').classList.toggle('hide',$('#ctl').classList.contains('hide'));stage.classList.toggle('recording');fit()}});

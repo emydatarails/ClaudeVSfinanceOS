@@ -20,6 +20,9 @@ A scripted marketing animation, "Claude vs Claude + FinanceOS" (Datarails). It's
 - The data is fictional (the "Vandelay" entities). Left and right numbers differ on purpose (for example DE 52.8% vs 54.3%). Keep the tables, the drift box, the lineage panel and the Excel sheets consistent with each other.
 
 - Control bar (`#ctl`): Datarails-branded (navy card, yellow pills, Poppins, logos). It shows chapter names from `CHAPTERS` (keyed like `VO`), not the internal beat labels. If you add a beat, add it to `CHAPTERS` too. The progress bar uses `RUN_MS`, which is measured by hand. If you retime the run, update it.
+- Chapter menu (`#chap`, left edge, opens on hover): `jumpTo(key)` restarts the run in seek mode. While `seeking` is set, sleeps are drained in virtual-time order through a MessageChannel, with the narration muted and transitions off behind `#seekov`. The seek ends when `chapter(key)` reaches the target. So:
+  - Anything time-based must go through `sleep`/`untilV`/`tween`, never `setTimeout` or `performance.now`, or it won't fast-forward.
+  - `run()`'s reset must clear everything the script creates, or leftovers from an earlier run show up after a jump or Restart. Jumps were checked against a normal run: the screen matches at every chapter start.
 - Static stretches are filled with visuals timed to the VO phrase: consolidation steps in beat 4, lineage rows in beat 5, estimate marks in beat 6, and the audit log in beat 8. Their `untilV` marks come from pauses in the clips (`ffmpeg ... silencedetect`).
 - Testing in a hidden browser pane: Chrome throttles timers in hidden tabs, so the script crawls. That's the test environment, not a bug.
 
