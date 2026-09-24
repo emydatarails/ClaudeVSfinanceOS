@@ -84,14 +84,24 @@
 </div>
 </div>
 
-<div id="ctl">
-  <button id="play">Play</button>
-  <button id="restart">Restart</button>
-  <select id="speed"><option value="0.75">0.75x</option><option value="1" selected>1x</option><option value="1.5">1.5x</option><option value="2">2x</option></select>
-  <label><input type="checkbox" id="vochk" checked> VO audio</label>
-  <label><input type="checkbox" id="capchk"> VO captions</label>
-  <span class="beat" id="beatlbl">Ready</span>
-  <span style="color:#777">Space play/pause &middot; R restart &middot; H hide bar</span>
+<div id="ctl" role="toolbar" aria-label="Playback controls">
+  <div class="ctl-prog" aria-hidden="true"><i id="prog"></i></div>
+  <div class="ctl-row">
+    <div class="ctl-brand"><img class="dr" src="assets/datarails-logo.svg" alt="Datarails"><span class="sep"></span><img class="fos" src="assets/financeos-bright.png" alt="FinanceOS"></div>
+    <div class="ctl-grp">
+      <button id="play" class="pill primary" aria-label="Play"><svg class="i-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5l12 7-12 7z"/></svg><svg class="i-pause" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14"/></svg><span id="playlbl">Play</span></button>
+      <button id="restart" class="pill" aria-label="Restart"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.3-5.7"/><path d="M4 4v4h4"/></svg>Restart</button>
+    </div>
+    <div class="ctl-grp seg" id="speed" role="radiogroup" aria-label="Speed">
+      <button data-v="0.75" role="radio">0.75&times;</button><button data-v="1" role="radio" class="on">1&times;</button><button data-v="1.5" role="radio">1.5&times;</button><button data-v="2" role="radio">2&times;</button>
+    </div>
+    <div class="ctl-grp">
+      <label class="tgl"><input type="checkbox" id="vochk" checked><span class="knob"></span>Narration</label>
+      <label class="tgl"><input type="checkbox" id="capchk"><span class="knob"></span>Captions</label>
+    </div>
+    <div class="ctl-status"><span class="beat" id="beatlbl">Ready</span><span class="time" id="timelbl">0:00</span></div>
+    <div class="ctl-keys"><kbd>Space</kbd>Play <kbd>R</kbd>Restart <kbd>H</kbd>Hide</div>
+  </div>
 </div>
 
 <script src="js/main.js"></script>

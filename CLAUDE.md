@@ -13,11 +13,15 @@ A scripted marketing animation, "Claude vs Claude + FinanceOS" (Datarails). It's
 - Two panels: `#L` (Claude alone) and `#R` (Claude + FinanceOS). Each one holds a mock Claude chat UI (`.msgs`, `.composer`), a mock Excel (`.excel`, built by `buildExcel`), and a `.card` overlay.
 - Full-stage overlays: `#intro`, `#hood` (under the hood), `#drift`, `#tokens`, `#end`, `#dim`. `#cap` holds the VO captions and `#cur` is the fake cursor.
 - `js/main.js`:
-  - Engine: `sleep()` respects pause and speed. `beat(n,label)` sets `beatT0`, and `untilV(ms)` waits until `ms` after the current beat starts. **Beat timings are synced to the VO audio.** When you change content, keep the `untilV` marks, or retime them against the matching clip in `audio/`.
+  - Engine: a virtual clock (`vnow()`) advances only while playing, scaled by speed. Always change state through `setPaused()` and `setSpeed()` so the clock stays exact. `sleep()` waits on the virtual clock. `beat(n,label)` sets `beatT0`, and `untilV(ms)` waits until `ms` after the current beat starts. **Beat timings are synced to the VO audio.** When you change content, keep the `untilV` marks, or retime them against the matching clip in `audio/`.
   - Helpers: `type`, `send`, `files`, `newAssistant`, `stream`, `table`, `tool`/`toolDone`, `line`, `caption`, `click`, `moveCursorTo`, `xselect`/`xsheet`/`xbtn` (Excel).
   - `run(tok)` is the whole script, beat by beat. `guard(tok)` stops a stale run after a restart.
   - Token counters are estimates: text length/4, file rows × `TOK_PER_ROW`, and tool definitions counted once (1200).
 - The data is fictional (the "Vandelay" entities). Left and right numbers differ on purpose (for example DE 52.8% vs 54.3%). Keep the tables, the drift box, the lineage panel and the Excel sheets consistent with each other.
+
+- Control bar (`#ctl`): Datarails-branded (navy card, yellow pills, Poppins, logos). The progress bar uses `RUN_MS`, which is measured by hand. If you retime the run, update it.
+- Static stretches are filled with visuals timed to the VO phrase: consolidation steps in beat 4, lineage rows in beat 5, estimate marks in beat 6, and the audit log in beat 8. Their `untilV` marks come from pauses in the clips (`ffmpeg ... silencedetect`).
+- Testing in a hidden browser pane: Chrome throttles timers in hidden tabs, so the script crawls. That's the test environment, not a bug.
 
 ## Brand
 - Datarails tokens are on `:root`: navy `#0C142B`, pink `#FA3576`, yellow `#FFA30F`, cream `#FFF9F1`. Claude UI tokens use the `--c-*` prefix.
