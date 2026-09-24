@@ -69,7 +69,17 @@ function tool(body,side,detail){if(!toolDefsCounted[side]){toolDefsCounted[side]
 function toolDone(d,side,resultTokens=350){d.classList.add('done');addTok(side,resultTokens);}
 function line(body,side,cls,html){const d=document.createElement('div');d.className=cls;d.innerHTML=html;body.appendChild(d);scrollMsgs(side);return d;}
 async function caption(t){const c=$('#cap');if(!t){c.classList.remove('show');return}c.querySelector('span').textContent=t;c.classList.add('show');}
-function beat(n,t){beatT0=vnow();$('#beatlbl').textContent=`Beat ${n} — ${t}`;}
+function beat(n,t){beatT0=vnow();$('#beatlbl').textContent=`Beat ${n} — ${t}`;vo(`${n}|${t}`);}
+
+/* narration: one clip per beat, started when the beat starts (keys are `${n}|${label}`) */
+const VO={'0|Opening':'VO_00_opening','2|Turn on the connector':'VO_01_beat2a_connector','2b|Under the hood':'VO_01b_hood',
+  '3|Data access':'VO_02_beat3_data','4|Consolidation':'VO_03_beat4_consolidation','5|Context':'VO_04_beat5_context',
+  '6|The drift':'VO_05_beat6_drift','7|Repeatability + Excel':'VO_06_beat7a_excel','7b|Refresh':'VO_07_beat7b_nextmonth',
+  '8|Control':'VO_08_beat8_compliance','9|Cost efficiency':'VO_09_beat9_cost','10|Close':'VO_10_beat10_close'};
+let voOn=true,voCur=null;
+function voStop(){if(voCur){voCur.pause();voCur=null;}}
+function vo(key){const f=VO[key];if(!f)return;voStop();if(!voOn)return;const a=new Audio(`audio/${f}_Despina_v2.wav`);a.preservesPitch=true;a.playbackRate=speed;voCur=a;if(!paused)a.play().catch(()=>{});}
+function voSync(){if(!voCur)return;voCur.playbackRate=speed;if(paused||!voOn)voCur.pause();else if(!voCur.ended)voCur.play().catch(()=>{});}
 
 /* excel */
 function buildExcel(side,cfg){
@@ -254,7 +264,7 @@ async function run(tok){
     
     await sleep(600);paneSet(R,'Drill Down · DE bridge!B5',`<div><div class="k">COGS rate variance, Vandelay DE, Q3 FY26</div><div class="v">−118,900 = Actual COGS − Plan COGS</div></div><table><tr><th>Component</th><th>Amount</th><th>Accounts</th></tr><tr><td>Actual COGS</td><td>1,910,000</td><td>5000&ndash;5090</td></tr><tr><td>Plan COGS (v3)</td><td>1,791,100</td><td>5000&ndash;5090</td></tr></table><div><div class="k">Definition</div><div class="v">COGS excludes implementation services (opex 6200&ndash;6240)</div></div><div><div class="k">Source</div><div class="v">NetSuite GL &middot; Vandelay DE &middot; 2026-07-01 to 2026-09-30</div></div><div><div class="k">FX</div><div class="v">EUR&rarr;USD, Q3 average 1.0842</div></div><span class="lk">Open source transactions (612 rows)</span>`);
     await untilV(34000);await xbtn(R,'drill');$('#R-pane').classList.add('on');await untilV(41300);$('#R-pane').classList.remove('on');await sleep(300);
-    await untilV(42600);caption("Now imagine next month. On the left, you do all of it again: find the files, re-upload, re-explain every definition, and hope Claude applies the same logic it did last time. Over on the right, you change the period and hit Refresh. Same definitions, same sources, current numbers.");$('#beatlbl').textContent='Beat 7b — Refresh';beatT0=vnow();focus('L');{const card=P[L].querySelector('.card');card.innerHTML='<h3>One month later.</h3><ul class="todo"></ul>';card.classList.add('on');}(async()=>{await sleep(1600);const ul=$('#L .card .todo');for(const t of ['Find the files again','Re-upload six exports','Re-explain every definition','Hope Claude applies the same logic']){const li=document.createElement('li');li.textContent=t;ul.appendChild(li);await sleep(60);li.classList.add('in');await sleep(1900);}})();await untilV(nextMonthRight);focus('R');
+    await untilV(42600);caption("Now imagine next month. On the left, you do all of it again: find the files, re-upload, re-explain every definition, and hope Claude applies the same logic it did last time. Over on the right, you change the period and hit Refresh. Same definitions, same sources, current numbers.");$('#beatlbl').textContent='Beat 7b — Refresh';beatT0=vnow();vo('7b|Refresh');focus('L');{const card=P[L].querySelector('.card');card.innerHTML='<h3>One month later.</h3><ul class="todo"></ul>';card.classList.add('on');}(async()=>{await sleep(1600);const ul=$('#L .card .todo');for(const t of ['Find the files again','Re-upload six exports','Re-explain every definition','Hope Claude applies the same logic']){const li=document.createElement('li');li.textContent=t;ul.appendChild(li);await sleep(60);li.classList.add('in');await sleep(1900);}})();await untilV(nextMonthRight);focus('R');
     await xsheet(R,0);await sleep(300);await xselect(R,'G1','Q3 FY26');await sleep(500);const g1=xcell(R,'G1');g1.classList.add('edit');g1.textContent='';const t='Q4 FY26';for(const ch of t){g1.textContent+=ch;$(`#R-fb`).textContent=g1.textContent;await sleep(110);}await sleep(400);g1.classList.remove('edit');await xbtn(R,'refresh');$('#R .excel .dlg').classList.add('on');await sleep(1400);$('#R .excel .dlg').classList.remove('on');
     Q4S.forEach((r,i)=>{const n=i+2;[['E',0],['B',1],['C',2],['D',3]].forEach(([col,ix])=>{const c=xcell(R,col+n);c.textContent=r[ix];c.classList.add('flash');});});xcell(R,'A1');$('#R .excel .fn').textContent='Q4_GM_pack_CFO.xlsx';await sleep(1500);};
   focus('L');await Promise.all([leftB7(),rightB7a()]);await untilV(18150);focus('R');await rightB7();await untilV(20700);focus(null);guard(tok);caption('');hideCursor();await sleep(500);
@@ -290,10 +300,11 @@ async function run(tok){
 
 /* ---------- controls ---------- */
 function start(){runToken++;const tok=runToken;paused=false;started=true;$('#play').textContent='Pause';run(tok).catch(e=>{if(e.message!=='restart')console.error(e)});}
-$('#play').onclick=()=>{if(!started){start();return}paused=!paused;$('#play').textContent=paused?'Play':'Pause';};
-$('#restart').onclick=()=>{runToken++;started=false;paused=true;$('#play').textContent='Play';$('#end').classList.remove('on');setTimeout(start,50);};
-$('#speed').onchange=e=>speed=+e.target.value;
+$('#play').onclick=()=>{if(!started){start();return}paused=!paused;$('#play').textContent=paused?'Play':'Pause';voSync();};
+$('#restart').onclick=()=>{voStop();runToken++;started=false;paused=true;$('#play').textContent='Play';$('#end').classList.remove('on');setTimeout(start,50);};
+$('#speed').onchange=e=>{speed=+e.target.value;voSync();};
+$('#vochk').onchange=e=>{voOn=e.target.checked;voSync();};
 $('#capchk').onchange=e=>$('#cap').classList.toggle('hidden',!e.target.checked);
 $('#cap').classList.add('hidden');
-{const q=new URLSearchParams(location.search);if(q.get('speed')){speed=+q.get('speed');$('#speed').value=q.get('speed')}if(q.get('rec')){$('#ctl').classList.add('hide');stage.classList.add('recording');fit()}if(q.get('cap'))$('#cap').classList.remove('hidden');if(q.get('anim')){const r=+q.get('anim');setInterval(()=>{for(const an of document.getAnimations()){if(an.playbackRate!==r)an.playbackRate=r;}},25);}if(q.get('auto'))setTimeout(start,600);}
+{const q=new URLSearchParams(location.search);if(q.get('speed')){speed=+q.get('speed');$('#speed').value=q.get('speed')}if(q.get('rec')){$('#ctl').classList.add('hide');stage.classList.add('recording');fit()}if(q.get('cap'))$('#cap').classList.remove('hidden');if(q.get('vo')==='0'){voOn=false;$('#vochk').checked=false;}if(q.get('anim')){const r=+q.get('anim');setInterval(()=>{for(const an of document.getAnimations()){if(an.playbackRate!==r)an.playbackRate=r;}},25);}if(q.get('auto'))setTimeout(start,600);}
 addEventListener('keydown',e=>{if(e.code==='Space'){e.preventDefault();$('#play').click()}if(e.key==='r'||e.key==='R')$('#restart').click();if(e.key==='h'||e.key==='H'){$('#ctl').classList.toggle('hide');stage.classList.toggle('recording');fit()}});

@@ -13,7 +13,7 @@ Then open http://localhost:8420. Serve it over HTTP instead of opening `index.ht
 ## Controls
 
 - **Space**: play or pause · **R**: restart · **H**: hide the control bar (clean frame for recording)
-- Speed selector (0.75×–2×), and a toggle for VO captions
+- Speed selector (0.75×–2×), plus toggles for the VO audio and the VO captions
 
 ## URL parameters
 
@@ -22,6 +22,7 @@ Then open http://localhost:8420. Serve it over HTTP instead of opening `index.ht
 | `?speed=1.5` | Playback speed |
 | `?rec=1` | Hides the control bar for screen recording |
 | `?cap=1` | Shows the VO captions |
+| `?vo=0` | Mutes the narration |
 | `?anim=<rate>` | Forces the CSS/Web Animations playback rate |
 
 ## Layout
@@ -31,4 +32,5 @@ index.html        markup for the stage, panels and overlays
 css/styles.css    all styles (design tokens are on :root)
 js/main.js        engine (sleep/clock, cursor, typing, Excel mock) + the beat script in run()
 assets/           logos (Claude, FinanceOS, Datarails, Google Drive, Slack)
+audio/            narration, one Despina VO clip per beat (v4 final, 12 lines)
 ```
