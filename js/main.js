@@ -84,14 +84,14 @@ function tool(body,side,detail){if(!toolDefsCounted[side]){toolDefsCounted[side]
 function toolDone(d,side,resultTokens=350){d.classList.add('done');addTok(side,resultTokens);}
 function line(body,side,cls,html){const d=document.createElement('div');d.className=cls;d.innerHTML=html;body.appendChild(d);scrollMsgs(side);return d;}
 async function caption(t){const c=$('#cap');if(!t){c.classList.remove('show');return}c.querySelector('span').textContent=t;c.classList.add('show');}
-const RUN_MS=266700; // measured length of one full run (virtual ms); used only for the progress bar. Re-measure after retiming.
+const RUN_MS=283700; // measured length of one full run (virtual ms); used only for the progress bar. Re-measure after retiming.
 const fmt=ms=>{const t=Math.max(0,Math.round(ms/1000));return `${Math.floor(t/60)}:${String(t%60).padStart(2,'0')}`};
 setInterval(()=>{const t=started?vnow():vAcc;$('#prog').style.width=Math.min(100,t/RUN_MS*100)+'%';$('#timelbl').textContent=`${fmt(t)} / ${fmt(RUN_MS)}`+(chIdx>=0?` \u00b7 ${chIdx+1} of ${CHAPTERS.length}`:'');},250);
 // Chapter names shown in the control bar, keyed like VO. Beats not listed (Setup) keep the previous chapter.
 const CHAPTERS=[['0|Opening','Intro'],['2|Turn on the connector','Connecting FinanceOS'],['2b|Under the hood','Under the Hood'],
   ['2|The prompt','Asking the Question'],['3|Data access','Getting the Data'],['4|Consolidation','Consolidating Sources'],
   ['5|Context','Defining the Terms'],['6|The drift','Tracing the Numbers'],['7|Repeatability + Excel','Building the CFO Pack'],
-  ['7b|Refresh','Next Month'],['8|Control','Permissions and Audit'],['9|Cost efficiency','Token Cost'],['10|Close','Wrap-Up']];
+  ['7b|Refresh','Next Month'],['8|Audit','Audit Trail'],['9|Cost efficiency','Token Cost'],['10|Close','Wrap-Up']];
 let chIdx=-1;
 function chapUI(){$$('#chap li').forEach((li,i)=>{li.classList.toggle('on',i===chIdx);li.classList.toggle('done',chIdx>=0&&i<chIdx);});}
 function buildChap(){$('#chap ol').innerHTML=CHAPTERS.map(([k,n],i)=>`<li><button data-k="${k}"><span class="n">${String(i+1).padStart(2,'0')}</span><span class="t">${n}</span></button></li>`).join('');
@@ -101,14 +101,14 @@ function chapter(key){const i=CHAPTERS.findIndex(c=>c[0]===key);if(i<0)return;ch
 function beat(n,t){beatT0=vnow();chapter(`${n}|${t}`);vo(`${n}|${t}`);}
 
 /* narration: one clip per beat, started when the beat starts (keys are `${n}|${label}`) */
-const VO={'0|Opening':'VO_00_opening','2|Turn on the connector':'VO_01_beat2a_connector','2b|Under the hood':'VO_01b_hood',
-  '3|Data access':'VO_02_beat3_data','4|Consolidation':'VO_03_beat4_consolidation','5|Context':'VO_04_beat5_context',
-  '6|The drift':'VO_05_beat6_drift','7|Repeatability + Excel':'VO_06_beat7a_excel','7b|Refresh':'VO_07_beat7b_nextmonth',
-  '8|Control':'VO_08_beat8_compliance','9|Cost efficiency':'VO_09_beat9_cost','10|Close':'VO_10_beat10_close'};
-const VO_REV=2; // bump after editing any clip so browsers don't play a cached copy
+const VO={'0|Opening':'VO_00_opening_Despina_v2','2|Turn on the connector':'VO_01_beat2a_connector_Despina_v2','2b|Under the hood':'VO_01b_hood_Despina_v2',
+  '3|Data access':'VO_02_beat3_data_Despina_v2','4|Consolidation':'VO_03_beat4_consolidation_Despina_v2','5|Context':'VO_04_beat5_context_Despina_v2',
+  '6|The drift':'VO_05_beat6_drift_Despina_v2','7|Repeatability + Excel':'VO_06_beat7a_excel_Despina_v2','7b|Refresh':'VO_07_beat7b_nextmonth_Despina_v2',
+  '8|Audit':'VO_08_beat8_audit_Despina_v3','9|Cost efficiency':'VO_09_beat9_cost_Despina_v2','10|Close':'VO_10_beat10_close_Despina_v2'};
+const VO_REV=3; // bump after editing any clip so browsers don't play a cached copy
 let voOn=true,voCur=null;
 function voStop(){if(voCur){voCur.pause();voCur=null;}}
-function vo(key){const f=VO[key];if(!f)return;voStop();if(!voOn||seeking)return;const a=new Audio(`audio/${f}_Despina_v2.wav?v=${VO_REV}`);a.preservesPitch=true;a.playbackRate=speed;voCur=a;if(!paused)a.play().catch(()=>{});}
+function vo(key){const f=VO[key];if(!f)return;voStop();if(!voOn||seeking)return;const a=new Audio(`audio/${f}.wav?v=${VO_REV}`);a.preservesPitch=true;a.playbackRate=speed;voCur=a;if(!paused)a.play().catch(()=>{});}
 function voSync(){if(!voCur)return;voCur.playbackRate=speed;if(paused||!voOn)voCur.pause();else if(!voCur.ended)voCur.play().catch(()=>{});}
 
 /* excel */
@@ -182,7 +182,7 @@ async function run(tok){
   for(const s of [L,R]){P[s].querySelector('.msgs').innerHTML='<div class="greet">Good afternoon</div>';P[s].querySelector('.ta').textContent='';const ex=P[s].querySelector('.excel');ex.className='excel';ex.innerHTML='';delete ex.dataset.sheet;const cd=P[s].querySelector('.card');cd.className='card';cd.innerHTML='';tokens[s]=0;addTok(s,0);}
   $('#R .lineage').classList.remove('open');$$('#R .lineage li').forEach(l=>l.classList.remove('in','hl'));
   $$('.ov').forEach(o=>o.classList.remove('on'));$('#L .share').classList.remove('hover','press');$('#L .tip').classList.remove('on');
-  $('#R .conn').classList.remove('on');$('#R .pop').classList.remove('on');$('#R .pop .sw').classList.remove('on');toolDefsCounted={L:false,R:false};$('#R .acctname').textContent='a.morgan';$('#R .acct').textContent='AM';$('#R .acctname').style.opacity='';$('#R .acct').style.opacity='';$('#tkL').textContent='0';$('#tkR').textContent='0';$('#pctN').textContent='0%';$$('#stage .cursorblink').forEach(x=>x.classList.remove('cursorblink'));$$('#stage .hover,#stage .press').forEach(x=>x.classList.remove('hover','press'));$$('#stage .send.on').forEach(x=>x.classList.remove('on'));cur.classList.remove('click');$$('#hood .in').forEach(x=>x.classList.remove('in'));$('#L .acct').textContent='AM';$('#intro').classList.remove('on');focus(null);P.L.classList.add('off');P.R.classList.add('off');P.L.style.opacity='';P.L.style.transition='';stampT=0;stampOn=false;$('#L .stamp').textContent='00:00';hideCursor();caption('');
+  $('#R .conn').classList.remove('on');$('#R .pop').classList.remove('on');$('#R .pop .sw').classList.remove('on');toolDefsCounted={L:false,R:false};$('#R .acctname').textContent='a.morgan';$('#R .acct').textContent='AM';$('#R .acctname').style.opacity='';$('#R .acct').style.opacity='';$('#tkL').textContent='0';$('#tkR').textContent='0';$('#pctN').textContent='0%';$$('#stage .cursorblink').forEach(x=>x.classList.remove('cursorblink'));$$('#stage .hover,#stage .press').forEach(x=>x.classList.remove('hover','press'));$$('#stage .send.on').forEach(x=>x.classList.remove('on'));cur.classList.remove('click');$$('#hood .in').forEach(x=>x.classList.remove('in'));$$('#L .finder').forEach(x=>x.remove());$('#L .acct').textContent='AM';$('#intro').classList.remove('on');focus(null);P.L.classList.add('off');P.R.classList.add('off');P.L.style.opacity='';P.L.style.transition='';stampT=0;stampOn=false;$('#L .stamp').textContent='00:00';hideCursor();caption('');
   $('#tokens .bar i').style.width='0';$$('#tokens .bar i')[1].style.width='0';
 
   vAcc=0;vLast=performance.now();
@@ -268,7 +268,7 @@ async function run(tok){
   // BEAT 7
   beat(7,'Repeatability + Excel');guard(tok);
   await sleep(400);
-  let nextMonthRight=12650,complianceRight=12600,complianceEnd=30200,complianceLeft=3150,complianceLeftItems=[4250,5550,7500],compliancePerm=17400;const P7='Put this in an Excel file for the CFO. GM by entity vs plan with variance in dollars and points, a monthly trend for the quarter, and a revenue and COGS bridge showing what is driving the DE variance.';
+  let nextMonthRight=12650;const P7='Put this in an Excel file for the CFO. GM by entity vs plan with variance in dollars and points, a monthly trend for the quarter, and a revenue and COGS bridge showing what is driving the DE variance.';
   await Promise.all([type(L,P7,52),type(R,P7,52)]);await sleep(300);
   await Promise.all([send(L),send(R)]);
   caption("Left, you get a file and three footnotes. Plan spread evenly, FX estimated, COGS as you described it. Reasonable guesses, nicely formatted.");
@@ -306,21 +306,55 @@ async function run(tok){
     Q4S.forEach((r,i)=>{const n=i+2;[['E',0],['B',1],['C',2],['D',3]].forEach(([col,ix])=>{const c=xcell(R,col+n);c.textContent=r[ix];c.classList.add('flash');});});xcell(R,'A1');$('#R .excel .fn').textContent='Q4_GM_pack_CFO.xlsx';await sleep(1500);};
   focus('L');await Promise.all([leftB7(),rightB7a()]);await untilV(18150);focus('R');await rightB7();await untilV(20100);focus(null);guard(tok);caption('');hideCursor();await sleep(300);
 
-  // BEAT 8
-  beat(8,'Control');guard(tok);
+  // BEAT 8 — Audit trail. Timings follow the pauses in VO_08_beat8_audit (46.4s).
+  beat(8,'Audit');guard(tok);
   for(const s of [L,R]){P[s].querySelector('.excel').classList.remove('on');}P[L].querySelector('.card').classList.remove('on');
-  await sleep(600);
-  caption("Now a colleague asks for the same numbers. On the left, nothing stops them: no permission model, no record of who saw what, and outputs that are hard to defend in an audit. Over on the right, they see something different: only the entities their FinanceOS permissions allow, UK and Germany, not the full set the first analyst saw. And every query, every number, every user is logged, securely, in FinanceOS. That's audit-ready.");
-  const leftB8=async()=>{await untilV(complianceLeft);const card=P[L].querySelector('.card');card.className='card limits';card.innerHTML='<h3>Without FinanceOS</h3><ul><li>No permission model: anyone in the chat sees everything</li><li>No record of who asked what, or who saw what</li><li>Outputs rebuilt from files, hard to defend in an audit</li></ul>';card.classList.add('on');const lis=$$('li',card);for(let k=0;k<3;k++){await untilV(complianceLeftItems[k]);lis[k].classList.add('in');}};
-  const rightB8=async()=>{await untilV(complianceRight-2300);{const card=P[R].querySelector('.card');card.innerHTML='<div class="acct" style="width:72px;height:72px;font-size:26px;background:#4646CE">DM</div><h3 style="font-size:36px">A colleague asks the same question</h3><p>Daniel Meyer &middot; FP&amp;A, EMEA &middot; FinanceOS access: UK and DE</p>';card.classList.add('on');await sleep(1700);card.classList.remove('on');await sleep(200);}const an=$('#R .acctname'),ac=$('#R .acct');an.style.opacity=0;ac.style.opacity=0;await sleep(300);an.textContent='d.meyer';ac.textContent='DM';an.style.opacity=1;ac.style.opacity=1;P[R].querySelector('.msgs').innerHTML='<div class="greet">Good afternoon</div>';await untilV(complianceRight);await type(R,'Show me Q3 gross margin by entity vs plan.',80);await send(R);await sleep(300);const b=newAssistant(R);const t8=tool(b,R,'gross_margin_pct &middot; by entity &middot; Q3 FY26 &middot; scope: EMEA (d.meyer)');await sleep(900);toolDone(t8,R,260);await stream(b,R,"Here's Q3 gross margin vs plan for the entities you have access to.",20);table(b,R,H4,[R_RIGHT[1],R_RIGHT[2]],{bold:[[1,3]]});await sleep(600);const pm=line(b,R,'perm',`<div class="ph"><img src="${FOSLOGO}" alt="FinanceOS">Same question, different permissions</div><div class="prow"><span class="who">a.morgan · Finance</span><div class="ents"><span>US</span><span>UK</span><span>DE</span><span>AU</span></div></div><div class="prow"><span class="who">d.meyer · FP&amp;A EMEA</span><div class="ents"><span class="off">US</span><span>UK</span><span>DE</span><span class="off">AU</span></div></div>`);const rows=$$('.prow',pm);await untilV(compliancePerm);rows[0].classList.add('in');scrollMsgs(R);await untilV(compliancePerm+900);rows[1].classList.add('in');scrollMsgs(R);
-    const au=line(b,R,'audit',`<div class="ah"><img src="${FOSLOGO}" alt="FinanceOS">Audit log<span class="live">Logged in FinanceOS</span></div>
-      <div class="arow"><span class="at">14:02:11</span><span class="au">a.morgan</span><span class="aq">gross_margin_pct &middot; by entity &middot; Q3 FY26</span><span class="as">US, UK, DE, AU</span></div>
-      <div class="arow"><span class="at">14:09:37</span><span class="au">a.morgan</span><span class="aq">drill_down &middot; Vandelay DE &middot; Q3 FY26</span><span class="as">DE</span></div>
-      <div class="arow now"><span class="at">14:31:05</span><span class="au">d.meyer</span><span class="aq">gross_margin_pct &middot; by entity &middot; Q3 FY26</span><span class="as">UK, DE</span></div>`);
-    scrollMsgs(R);const ar=$$('.arow',au);for(const [k,t] of [[0,20200],[1,21100],[2,22400]]){await untilV(t);if(!k)au.classList.add('in');ar[k].classList.add('in');scrollMsgs(R);}
-    await untilV(24100);$('.live',au).classList.add('on');
-    await untilV(28800);const ok=line(b,R,'',`<span class="tag pulse">&#10003; Audit-ready: every query, number and user on record</span>`);scrollMsgs(R);await sleep(900);ok.firstChild.classList.remove('pulse');};
-  focus('L');const rB8=rightB8();await leftB8();await untilV(complianceRight-400);P[L].querySelector('.card').classList.remove('on');focus('R');await rB8;await untilV(complianceEnd);P[L].querySelector('.card').className='card';focus(null);guard(tok);caption('');hideCursor();await sleep(300);
+  caption("Now, the audit. On the left, a number is only as traceable as the chat it came from. To find the source, you find the conversation, scroll back, and search for how Claude got there. Or you ask again, and hope it can retrace its own steps. That's not an audit-ready environment. For a finance team, that's a real problem. Over on the right, every action by every user is logged securely in FinanceOS: who asked what, and when. And every number stays traceable. Open a new chat, ask where 54.3 came from, and FinanceOS lineage drills straight down to the source. That's audit-ready.");
+  const leftB8=async()=>{
+    await untilV(1960);focus('L');
+    // "you find the conversation": the find bar appears over the old thread
+    const fd=document.createElement('div');fd.className='finder';fd.innerHTML='<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/></svg><span class="q"></span><span class="cnt"></span>';P[L].querySelector('.win').appendChild(fd);
+    await untilV(7100);fd.classList.add('on');
+    // "scroll back": wind the thread up to the top
+    const m=P[L].querySelector('.msgs');await untilV(9300);const st=m.scrollTop;await tween(1600,e=>{m.scrollTop=st*(1-e)});
+    // "search for how Claude got there": type the number, mark the hits, step through them
+    await untilV(11300);const q=$('.q',fd);for(const ch of '52.8%'){q.textContent+=ch;await sleep(90);}
+    const nodes=[];const walk=document.createTreeWalker(m,NodeFilter.SHOW_TEXT);let tn;while(tn=walk.nextNode())if(tn.nodeValue.includes('52.8%'))nodes.push(tn);
+    const hits=nodes.map(t=>{const i=t.nodeValue.indexOf('52.8%');const r=document.createRange();r.setStart(t,i);r.setEnd(t,i+5);const mk=document.createElement('mark');mk.className='hit';r.surroundContents(mk);return mk;});
+    $('.cnt',fd).textContent=`${hits.length} matches`;
+    const sc=()=>+stage.dataset.scale;
+    for(const h of hits){await sleep(650);hits.forEach(x=>x.classList.remove('cur'));h.classList.add('cur');m.scrollTop+=(h.getBoundingClientRect().top-m.getBoundingClientRect().top)/sc()-m.clientHeight/2;}
+    // "Or you ask again, and hope it can retrace its own steps": a fresh chat, and it can't
+    await untilV(14070);fd.remove();m.innerHTML='<div class="greet">Good afternoon</div>';await sleep(350);
+    await type(L,'Where did the 52.8% for Vandelay DE come from?',70);await send(L);
+    const b=newAssistant(L);await stream(b,L,"I don't have access to our earlier conversation, so I can't trace where that 52.8% came from. If you share the files and the definitions again, I can rebuild the calculation.",22);
+    line(b,L,'status','No lineage &middot; retraced from memory, or not at all');
+    // "That's not an audit-ready environment. For a finance team, that's a real problem."
+    await untilV(18640);const card=P[L].querySelector('.card');card.className='card limits';card.innerHTML='<h3>Not audit-ready</h3><ul><li>The source lives in a chat thread</li><li>Retraced from memory, or not at all</li><li>Nothing to hand an auditor</li></ul>';card.classList.add('on');
+    const lis=$$('li',card);for(const [k,t] of [[0,21450],[1,22750],[2,23600]]){await untilV(t);lis[k].classList.add('in');}
+  };
+  const rightB8=async()=>{
+    // "every action by every user is logged securely in FinanceOS": the activity log
+    await untilV(25150);focus('R');
+    const card=P[R].querySelector('.card');card.className='card log';
+    const ROWS8=[['14:02','a.morgan','gross_margin_pct &middot; by entity &middot; Q3 FY26','NetSuite, SAP, Salesforce'],['14:09','a.morgan','drill_down &middot; gross_margin_pct &middot; Vandelay DE','SAP GL'],['14:31','d.meyer','gross_margin_pct &middot; by entity &middot; Q3 FY26','NetSuite, SAP'],['14:40','a.morgan','export_workbook &middot; Q3_GM_pack_CFO.xlsx','3 sheets, DR.GET'],['15:12','r.patel','refresh &middot; Q4_GM_pack_CFO.xlsx &middot; Q4 FY26','FinanceOS']];
+    card.innerHTML='<h3>FinanceOS activity log</h3>'+ROWS8.map(r=>`<div class="lrow"><span class="lt">${r[0]}</span><span class="lu">${r[1]}</span><span class="la">${r[2]}</span><span class="ls">${r[3]}</span></div>`).join('')+'<div class="lfoot"><span class="pip"></span>Every action, by every user, logged securely in FinanceOS</div>';
+    await untilV(26440);card.classList.add('on');const rows=$$('.lrow',card);for(let k=0;k<rows.length;k++){await untilV(26900+k*850);rows[k].classList.add('in');}
+    await untilV(31460);card.classList.add('hl-user');                                   // "who asked what"
+    await untilV(32690);card.classList.remove('hl-user');card.classList.add('hl-time');   // "and when"
+    await untilV(33300);card.classList.remove('hl-time');$('.lfoot',card).classList.add('in');
+    // "every number stays traceable. Open a new chat": a fresh thread
+    await untilV(36390);card.classList.remove('on');P[R].querySelector('.msgs').innerHTML='<div class="greet">Good afternoon</div>';
+    await untilV(37830);await type(R,'Where did the 54.3% for Vandelay DE come from?',70);await send(R);
+    const b=newAssistant(R);const t8=tool(b,R,'lineage &middot; gross_margin_pct &middot; Vandelay DE &middot; Q3 FY26');
+    // "FinanceOS lineage drills straight down to the source"
+    await untilV(40640);toolDone(t8,R,520);
+    const d=line(b,R,'drill',`<div class="dh"><img src="${FOSLOGO}" alt="FinanceOS">Lineage &middot; Gross margin, Vandelay DE, Q3 FY26</div><div class="dbig">54.3%</div><div class="ddef">(Net Revenue &minus; COGS) / Net Revenue &middot; defined once in the FinanceOS semantic layer</div><ul><li>Revenue: $4,180,000 <span>&mdash; accounts 4000&ndash;4090</span></li><li>COGS: $1,910,000 <span>&mdash; accounts 5000&ndash;5090</span></li><li>Source: SAP GL, Vandelay DE <span>&mdash; 1,284 transactions, 2026-07-01 to 2026-09-30</span></li><li>FX: EUR&rarr;USD, Q3 average <b>1.0842</b></li><li>Plan: FY26 Plan v3 <span>&mdash; approved 2026-01-14</span></li><li>Asked by a.morgan <span>&mdash; 15:20, logged in FinanceOS</span></li></ul>`);
+    const lis=$$('li',d);for(let k=0;k<lis.length;k++){await untilV(41300+k*520);lis[k].classList.add('in');scrollMsgs(R);}addTok(R,160);
+    // "That's audit-ready."
+    await untilV(44980);const ok=line(b,R,'',`<span class="tag pulse">&#10003; Audit-ready: every action logged, every number traced to its source</span>`);scrollMsgs(R);await sleep(900);ok.firstChild.classList.remove('pulse');
+  };
+  const lB8=leftB8(),rB8=rightB8();await lB8;await untilV(24600);P[L].querySelector('.card').classList.remove('on');await rB8;await untilV(47200);P[L].querySelector('.card').className='card';P[R].querySelector('.card').className='card';focus(null);guard(tok);caption('');hideCursor();await sleep(300);
 
   // BEAT 9
   beat(9,'Cost efficiency');guard(tok);stampShow();stampOn=false;

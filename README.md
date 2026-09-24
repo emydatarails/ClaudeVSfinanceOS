@@ -1,6 +1,6 @@
 # Claude vs Claude + FinanceOS
 
-A 1920×1080 scripted, browser-based animation comparing Claude alone (left panel) with Claude connected to Datarails FinanceOS (right panel). It plays through 10 beats: setup, connector, data access, consolidation, context, drift, Excel/DR.GET, control, token cost, and the close.
+A 1920×1080 scripted, browser-based animation comparing Claude alone (left panel) with Claude connected to Datarails FinanceOS (right panel). It plays through 13 chapters: intro, connector, under the hood, the question, data access, consolidation, definitions, tracing, the CFO pack, next month, audit trail, token cost, and the close. A hover menu on the left edge jumps between them.
 
 ## Run
 
@@ -32,5 +32,5 @@ index.html        markup for the stage, panels and overlays
 css/styles.css    all styles (design tokens are on :root)
 js/main.js        engine (sleep/clock, cursor, typing, Excel mock) + the beat script in run()
 assets/           logos (Claude, FinanceOS, Datarails, Google Drive, Slack)
-audio/            narration, one Despina VO clip per beat (v4 final, 12 lines)
+audio/            narration, one Despina VO clip per beat (v4 final; beat 8 re-recorded with Gemini 2.5 Pro)
 ```

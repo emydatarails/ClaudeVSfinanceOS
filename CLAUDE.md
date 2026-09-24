@@ -5,8 +5,9 @@ A scripted marketing animation, "Claude vs Claude + FinanceOS" (Datarails). It's
 ## Run / preview
 - `python3 -m http.server 8420`, then open http://localhost:8420 (also set up in `.claude/launch.json` as `animation`).
 - Recording: `?rec=1` hides the controls. The final videos are rendered at 60fps and edited in Premiere in the parent folder (`../`).
-- Narration: `audio/VO_*_Despina_v2.wav` holds 12 clips, one per beat. `VO` in `js/main.js` maps `"<beat n>|<label>"` to a clip, and `beat()` starts it (beat 7b calls `vo('7b|Refresh')` directly). The audio follows play/pause and speed. Every clip is a little shorter than its beat's final `untilV`. If you replace a clip with a longer one, extend that beat's timings to match. After editing any clip, bump `VO_REV` so browsers fetch the new file.
+- Narration: `audio/VO_*.wav` holds 12 clips, one per beat. `VO` in `js/main.js` maps `"<beat n>|<label>"` to a clip basename, and `beat()` starts it (beat 7b calls `vo('7b|Refresh')` directly). The audio follows play/pause and speed. Every clip is a little shorter than its beat's final `untilV`. If you replace a clip with a longer one, extend that beat's timings to match. After editing any clip, bump `VO_REV` so browsers fetch the new file.
 - `VO_00` and `VO_01` were trimmed to drop "Watch what the foundation does to the answer." and "That's the whole setup." The originals are in `../../VO_Despina_v4_final_12_lines.zip`.
+- Re-recording a line: use the Magnific connector's `audio_tts` with `model: gemini_v2_5_pro`, `voiceId: 703` (Despina), a `systemInstruction` performance note ("calm, confident product narrator for a finance audience: unhurried, warm, precise"), and inline `[pause 0.5s]` tags. Trim the edges with ffmpeg `silenceremove`, convert to 24 kHz mono 16-bit, then get the sentence marks from `silencedetect` and time the beat's `untilV` calls to them. `VO_08_beat8_audit_Despina_v3` was made this way; it reads slower (46s) than the human-paced clips.
 
 ## Architecture
 - `#stage` is a fixed 1920×1080 canvas, and `fit()` scales it to the window. Position everything in stage pixels.
@@ -23,7 +24,7 @@ A scripted marketing animation, "Claude vs Claude + FinanceOS" (Datarails). It's
 - Chapter menu (`#chap`, left edge, opens on hover): `jumpTo(key)` restarts the run in seek mode. While `seeking` is set, sleeps are drained in virtual-time order through a MessageChannel, with the narration muted and transitions off behind `#seekov`. The seek ends when `chapter(key)` reaches the target. So:
   - Anything time-based must go through `sleep`/`untilV`/`tween`, never `setTimeout` or `performance.now`, or it won't fast-forward.
   - `run()`'s reset must clear everything the script creates, or leftovers from an earlier run show up after a jump or Restart. Jumps were checked against a normal run: the screen matches at every chapter start.
-- Static stretches are filled with visuals timed to the VO phrase: consolidation steps in beat 4, lineage rows in beat 5, estimate marks in beat 6, and the audit log in beat 8. Their `untilV` marks come from pauses in the clips (`ffmpeg ... silencedetect`).
+- Static stretches are filled with visuals timed to the VO phrase: consolidation steps in beat 4, lineage rows in beat 5, estimate marks in beat 6. Beat 8 (Audit Trail) is all about traceability, not permissions: a find-in-chat search and a memoryless new chat on the left, an activity-log card and a lineage drill-down in a new chat on the right. Their `untilV` marks come from pauses in the clips (`ffmpeg ... silencedetect`).
 - Testing in a hidden browser pane: Chrome throttles timers in hidden tabs, so the script crawls. That's the test environment, not a bug.
 
 ## Brand
