@@ -5,7 +5,8 @@ A scripted marketing animation, "Claude vs Claude + FinanceOS" (Datarails). It's
 ## Run / preview
 - `python3 -m http.server 8420`, then open http://localhost:8420 (also set up in `.claude/launch.json` as `animation`).
 - Recording: `?rec=1` hides the controls. The final videos are rendered at 60fps and edited in Premiere in the parent folder (`../`).
-- Narration: `audio/VO_*_Despina_v2.wav` holds 12 clips, one per beat. `VO` in `js/main.js` maps `"<beat n>|<label>"` to a clip, and `beat()` starts it (beat 7b calls `vo('7b|Refresh')` directly). The audio follows play/pause and speed. Every clip is a little shorter than its beat's final `untilV`. If you replace a clip with a longer one, extend that beat's timings to match.
+- Narration: `audio/VO_*_Despina_v2.wav` holds 12 clips, one per beat. `VO` in `js/main.js` maps `"<beat n>|<label>"` to a clip, and `beat()` starts it (beat 7b calls `vo('7b|Refresh')` directly). The audio follows play/pause and speed. Every clip is a little shorter than its beat's final `untilV`. If you replace a clip with a longer one, extend that beat's timings to match. After editing any clip, bump `VO_REV` so browsers fetch the new file.
+- `VO_00` and `VO_01` were trimmed to drop "Watch what the foundation does to the answer." and "That's the whole setup." The originals are in `../../VO_Despina_v4_final_12_lines.zip`.
 
 ## Architecture
 - `#stage` is a fixed 1920×1080 canvas, and `fit()` scales it to the window. Position everything in stage pixels.

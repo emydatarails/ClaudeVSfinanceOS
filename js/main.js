@@ -76,9 +76,10 @@ const VO={'0|Opening':'VO_00_opening','2|Turn on the connector':'VO_01_beat2a_co
   '3|Data access':'VO_02_beat3_data','4|Consolidation':'VO_03_beat4_consolidation','5|Context':'VO_04_beat5_context',
   '6|The drift':'VO_05_beat6_drift','7|Repeatability + Excel':'VO_06_beat7a_excel','7b|Refresh':'VO_07_beat7b_nextmonth',
   '8|Control':'VO_08_beat8_compliance','9|Cost efficiency':'VO_09_beat9_cost','10|Close':'VO_10_beat10_close'};
+const VO_REV=2; // bump after editing any clip so browsers don't play a cached copy
 let voOn=true,voCur=null;
 function voStop(){if(voCur){voCur.pause();voCur=null;}}
-function vo(key){const f=VO[key];if(!f)return;voStop();if(!voOn)return;const a=new Audio(`audio/${f}_Despina_v2.wav`);a.preservesPitch=true;a.playbackRate=speed;voCur=a;if(!paused)a.play().catch(()=>{});}
+function vo(key){const f=VO[key];if(!f)return;voStop();if(!voOn)return;const a=new Audio(`audio/${f}_Despina_v2.wav?v=${VO_REV}`);a.preservesPitch=true;a.playbackRate=speed;voCur=a;if(!paused)a.play().catch(()=>{});}
 function voSync(){if(!voCur)return;voCur.playbackRate=speed;if(paused||!voOn)voCur.pause();else if(!voCur.ended)voCur.play().catch(()=>{});}
 
 /* excel */
@@ -156,7 +157,7 @@ async function run(tok){
   $('#tokens .bar i').style.width='0';$$('#tokens .bar i')[1].style.width='0';
 
   vclock=0;tRun=performance.now();
-  const hoodLeft=2650,hoodRight=5560,hoodTags=[8900,16050,20950],hoodEnd=27300;
+  const hoodLeft=2650,hoodRight=5560,hoodTags=[8900,16050,20950],hoodEnd=26900;
   // INTRO
   beat(0,'Opening');guard(tok);
   P.L.classList.add('off');P.R.classList.add('off');$('#in1').textContent='';$('#in2').textContent='';$('#intro').classList.add('on');
@@ -165,20 +166,19 @@ async function run(tok){
   {const a=$('#in1');a.classList.add('cursorblink');for(const ch of 'Two Claudes. Same question.'){a.textContent+=ch;await sleep(55);}a.classList.remove('cursorblink');await sleep(900);
    const b=$('#in2');b.classList.add('cursorblink');for(const ch of 'One of them has FinanceOS.'){b.textContent+=ch;await sleep(55);}b.classList.remove('cursorblink');b.innerHTML='One of them has <b>FinanceOS.</b>';await sleep(2200);}
   $('#intro').classList.remove('on');await sleep(800);
-  caption("Left, Claude working from whatever you hand it. Right, Claude connected to Datarails FinanceOS. Watch what the foundation does to the answer.");
-  P.L.classList.remove('off');await sleep(500);P.R.classList.remove('off');await untilV(19000);caption('');await sleep(300);
+  caption("Left, Claude working from whatever you hand it. Right, Claude connected to Datarails FinanceOS.");
+  P.L.classList.remove('off');await sleep(500);P.R.classList.remove('off');await untilV(16300);caption('');await sleep(300);
 
   // BEAT 1
   beat(1,'Setup');guard(tok);
   caption('');
-  caption('');await sleep(400);
 
   // BEAT 2
   beat(2,'Turn on the connector');guard(tok);
-  caption("Step one, on the right. Turn on the FinanceOS Connector. That's the whole setup.");
+  caption("Step one, on the right. Turn on the FinanceOS Connector.");
   focus('R');{const plus=$('#R .composer .plus');await click(plus);plus.classList.add('hover');$('#R .pop').classList.add('on');await sleep(700);
    const rw=$('#R .pop .rw.fos');moveCursorTo(rw.querySelector('.sw'));await sleep(650);rw.classList.add('hover');await sleep(400);cur.classList.add('click');await sleep(200);cur.classList.remove('click');rw.querySelector('.sw').classList.add('on');await sleep(900);
-   $('#R .pop').classList.remove('on');rw.classList.remove('hover');plus.classList.remove('hover');await sleep(200);$('#R .conn').classList.add('on');hideCursor();await untilV(6000);}
+   $('#R .pop').classList.remove('on');rw.classList.remove('hover');plus.classList.remove('hover');await sleep(200);$('#R .conn').classList.add('on');hideCursor();await untilV(4700);}
   caption('');focus(null);
   // BEAT 2b — Under the hood
   beat('2b','Under the hood');guard(tok);
@@ -188,9 +188,9 @@ async function run(tok){
   await untilV(hoodRight);$('#hR').classList.add('in');await sleep(300);$('#hR1').classList.add('in');await sleep(300);$('#hR2').classList.add('in');await sleep(250);$('#hR3').classList.add('in');
   {const rows=$$('#hR3 .row');for(let i=0;i<3;i++){await untilV(hoodTags[i]);rows[i].classList.add('in');}}
   await untilV(23950);$('#hR4').classList.add('in');await sleep(250);$('#hR5').classList.add('in');await sleep(250);$('#hR6').classList.add('in');await sleep(250);$('#hR7').classList.add('in');await sleep(300);$('#hRn').classList.add('in');
-  await untilV(hoodEnd);$('#hood').classList.remove('on');await sleep(700);
+  await untilV(hoodEnd);$('#hood').classList.remove('on');await sleep(450);
   beat(2,'The prompt');
-  await Promise.all([type(L,PROMPT),type(R,PROMPT)]);await sleep(500);
+  await Promise.all([type(L,PROMPT,60),type(R,PROMPT,60)]);await sleep(250);
   await Promise.all([send(L),send(R)]);
 
   // BEAT 3
@@ -198,21 +198,21 @@ async function run(tok){
   stampOn=true;
   let toolB3=null;const rightB3=async()=>{await sleep(900);const b=newAssistant(R);toolB3=tool(b,R,'gross_margin_pct &middot; by entity &middot; Q3 FY26 &middot; Actual vs Plan');await sleep(900);await stream(b,R,'Pulling Q3 actuals and FY26 plan from FinanceOS.',12);line(b,R,'status','Sources: NetSuite &middot; SAP &middot; Salesforce &middot; FY26 Plan (v3, approved)');};
   const leftB3=async()=>{await sleep(700);const b=newAssistant(L);await stream(b,L,"I don't have access to your financial systems. Please upload the Q3 actuals and the plan, and let me know which entities to include.");await sleep(1400);await files(L,['Q3_GL_export_NetSuite.xlsx','Q3_GL_export_SAP_DE_AU.xlsx','Q3_bookings_Salesforce.csv','FY26_Plan_v2.xlsx','Q3_GL_export_NetSuite (1).xlsx'],750);};
-  focus('L');await leftB3();await untilV(13200);focus('R');await rightB3();await untilV(20800);focus(null);guard(tok);caption('');await sleep(300);
+  focus('L');await leftB3();await untilV(13200);focus('R');await rightB3();await untilV(20200);focus(null);guard(tok);caption('');await sleep(250);
 
   // BEAT 4
   beat(4,'Consolidation');guard(tok);
   caption("On the left, you get a number with a warning attached. Two ERPs with different charts of accounts, a CRM that doesn't agree with either, currencies still mixed, intercompany counted twice. So back you go to fix it. Over on the right, FinanceOS has already brought NetSuite, SAP and Salesforce into one consolidated set: accounts mapped, FX applied, intercompany eliminated. That small tag under the table is the receipt.");
   const rightB4=async()=>{await sleep(300);toolDone(toolB3,R,420);await sleep(500);const b=newAssistant(R);rightTable=table(b,R,H4,R_RIGHT,{bold:[[2,3]]});await sleep(500);line(b,R,'status','<b style="color:#29261b">Flagged:</b> Vandelay DE is 3.7 points below plan.');await sleep(600);const tg=line(b,R,'','<span class="tag">Consolidated: NetSuite + SAP + Salesforce &middot; 4 entities &middot; accounts mapped &middot; FX at Q3 average &middot; intercompany eliminated</span>');await sleep(2600);tg.firstChild.classList.add('pulse');await sleep(1200);tg.firstChild.classList.remove('pulse');};
   const leftB4=async()=>{await sleep(900);const b=newAssistant(L);await stream(b,L,"Here's a first pass. Notes: the SAP export for DE and AU uses a different chart of accounts from NetSuite, so I mapped accounts approximately. Salesforce bookings don't reconcile to either GL. UK is in GBP, DE in EUR, AU in AUD; not converted. Intercompany between US and DE may be counted twice.",22);table(b,L,['Entity','Q3 GM%','Plan GM%'],R_LEFT1);await sleep(1800);await type(L,'Map SAP accounts to the NetSuite chart. Use GL revenue, not bookings. Convert to USD at Q3 average rates. Eliminate intercompany. Redo.',60);await sleep(300);await send(L);};
-  focus('L');await leftB4();await untilV(15000);focus('R');await rightB4();await untilV(29100);focus(null);guard(tok);caption('');await sleep(300);
+  focus('L');await leftB4();await untilV(15000);focus('R');await rightB4();await untilV(29000);focus(null);guard(tok);caption('');await sleep(250);
 
   // BEAT 5
   beat(5,'Context');guard(tok);
   caption("On the left, now you're writing a paragraph. What counts as net revenue, what sits in COGS, how 'Services' maps, which plan is official. You're teaching Claude your business from scratch, and you'll teach it again next time. Over on the right, those terms are defined once, in the FinanceOS semantic layer, and every report, dashboard and Claude answer uses the same ones. Ask how a number was built, and it walks you straight back to the ledger.");
   const leftB5=async()=>{await sleep(500);await type(L,'A few definitions before you redo it. Net revenue is after credits and intercompany. Gross margin uses net revenue and excludes implementation services cost, that sits in opex. "Services" in Salesforce maps to "Professional Services" in the GL. The plan file is v2 but we measure against v3, uploading it.',85);await send(L);await files(L,['FY26_Plan_v3_FINAL.xlsx'],500);await sleep(600);const b=newAssistant(L);await stream(b,L,'Understood. Recalculating with those definitions.',14);await sleep(600);leftTable2=table(b,L,H4,R_LEFT2,{bold:[[2,3]]});line(b,L,'status','<b style="color:#29261b">Flagged:</b> Vandelay DE is 5.2 points below plan.');await sleep(500);[[1,1],[2,1]].forEach(([r,c])=>leftTable2.rows[r+1].cells[c].classList.add('pulsecell'));};
   const rightB5=async()=>{await sleep(1200);await type(R,"How was Vandelay DE's 54.3% calculated? Show me the source.",44);await send(R);const b=newAssistant(R);const t5=tool(b,R,'drill_down &middot; gross_margin_pct &middot; Vandelay DE &middot; Q3 FY26');await sleep(1500);toolDone(t5,R,640);await stream(b,R,"Here's the breakdown from FinanceOS:",13);const d=line(b,R,'drill',`<div class="dh"><img src="assets/financeos-badge.png" alt="FinanceOS">Gross margin, Vandelay DE, Q3 FY26</div><div class="dbig">54.3%</div><div class="ddef"><b>Defined in the FinanceOS semantic layer</b> &middot; Net Revenue &middot; COGS &middot; Gross Margin % &middot; Plan v3<br>Same definitions in every report, dashboard and Claude answer.</div><div class="ddef">Gross Margin % = (Net Revenue &minus; COGS) / Net Revenue. Net Revenue is after credits and intercompany. COGS excludes implementation services (opex).</div><ul><li>Revenue: $4,180,000 <span>&mdash; accounts 4000&ndash;4090</span></li><li>COGS: $1,910,000 <span>&mdash; accounts 5000&ndash;5090</span></li><li id="srcline">Source: SAP GL, Vandelay DE <span>&mdash; 1,284 transactions, 2026-07-01 to 2026-09-30</span></li><li id="fxline">FX: EUR&rarr;USD, Q3 average <b>1.0842</b></li><li>Plan: FY26 Plan v3 <span>&mdash; approved 2026-01-14</span></li></ul>`);for(const li of $$('li',d)){li.classList.add('in');scrollMsgs(R);await sleep(380);}addTok(R,140);await sleep(2200);};
-  focus('L');await leftB5();await untilV(13800);focus('R');await rightB5();await untilV(28200);focus(null);guard(tok);caption('');await sleep(400);
+  focus('L');await leftB5();await untilV(13800);focus('R');await rightB5();await untilV(27600);focus(null);guard(tok);caption('');await sleep(250);
 
   // BEAT 6
   beat(6,'The drift');guard(tok);
@@ -231,7 +231,7 @@ async function run(tok){
   // BEAT 7
   beat(7,'Repeatability + Excel');guard(tok);
   await sleep(400);
-  let nextMonthRight=12650,complianceRight=12600,complianceEnd=30500,complianceLeft=3150,complianceLeftItems=[4250,5550,7500],compliancePerm=17400;const P7='Put this in an Excel file for the CFO. GM by entity vs plan with variance in dollars and points, a monthly trend for the quarter, and a revenue and COGS bridge showing what is driving the DE variance.';
+  let nextMonthRight=12650,complianceRight=12600,complianceEnd=30200,complianceLeft=3150,complianceLeftItems=[4250,5550,7500],compliancePerm=17400;const P7='Put this in an Excel file for the CFO. GM by entity vs plan with variance in dollars and points, a monthly trend for the quarter, and a revenue and COGS bridge showing what is driving the DE variance.';
   await Promise.all([type(L,P7,52),type(R,P7,52)]);await sleep(300);
   await Promise.all([send(L),send(R)]);
   caption("Left, you get a file and three footnotes. Plan spread evenly, FX estimated, COGS as you described it. Reasonable guesses, nicely formatted.");
@@ -264,10 +264,10 @@ async function run(tok){
     
     await sleep(600);paneSet(R,'Drill Down · DE bridge!B5',`<div><div class="k">COGS rate variance, Vandelay DE, Q3 FY26</div><div class="v">−118,900 = Actual COGS − Plan COGS</div></div><table><tr><th>Component</th><th>Amount</th><th>Accounts</th></tr><tr><td>Actual COGS</td><td>1,910,000</td><td>5000&ndash;5090</td></tr><tr><td>Plan COGS (v3)</td><td>1,791,100</td><td>5000&ndash;5090</td></tr></table><div><div class="k">Definition</div><div class="v">COGS excludes implementation services (opex 6200&ndash;6240)</div></div><div><div class="k">Source</div><div class="v">NetSuite GL &middot; Vandelay DE &middot; 2026-07-01 to 2026-09-30</div></div><div><div class="k">FX</div><div class="v">EUR&rarr;USD, Q3 average 1.0842</div></div><span class="lk">Open source transactions (612 rows)</span>`);
     await untilV(34000);await xbtn(R,'drill');$('#R-pane').classList.add('on');await untilV(41300);$('#R-pane').classList.remove('on');await sleep(300);
-    await untilV(42600);caption("Now imagine next month. On the left, you do all of it again: find the files, re-upload, re-explain every definition, and hope Claude applies the same logic it did last time. Over on the right, you change the period and hit Refresh. Same definitions, same sources, current numbers.");$('#beatlbl').textContent='Beat 7b — Refresh';beatT0=vnow();vo('7b|Refresh');focus('L');{const card=P[L].querySelector('.card');card.innerHTML='<h3>One month later.</h3><ul class="todo"></ul>';card.classList.add('on');}(async()=>{await sleep(1600);const ul=$('#L .card .todo');for(const t of ['Find the files again','Re-upload six exports','Re-explain every definition','Hope Claude applies the same logic']){const li=document.createElement('li');li.textContent=t;ul.appendChild(li);await sleep(60);li.classList.add('in');await sleep(1900);}})();await untilV(nextMonthRight);focus('R');
+    await untilV(42000);caption("Now imagine next month. On the left, you do all of it again: find the files, re-upload, re-explain every definition, and hope Claude applies the same logic it did last time. Over on the right, you change the period and hit Refresh. Same definitions, same sources, current numbers.");$('#beatlbl').textContent='Beat 7b — Refresh';beatT0=vnow();vo('7b|Refresh');focus('L');{const card=P[L].querySelector('.card');card.innerHTML='<h3>One month later.</h3><ul class="todo"></ul>';card.classList.add('on');}(async()=>{await sleep(1600);const ul=$('#L .card .todo');for(const t of ['Find the files again','Re-upload six exports','Re-explain every definition','Hope Claude applies the same logic']){const li=document.createElement('li');li.textContent=t;ul.appendChild(li);await sleep(60);li.classList.add('in');await sleep(1900);}})();await untilV(nextMonthRight);focus('R');
     await xsheet(R,0);await sleep(300);await xselect(R,'G1','Q3 FY26');await sleep(500);const g1=xcell(R,'G1');g1.classList.add('edit');g1.textContent='';const t='Q4 FY26';for(const ch of t){g1.textContent+=ch;$(`#R-fb`).textContent=g1.textContent;await sleep(110);}await sleep(400);g1.classList.remove('edit');await xbtn(R,'refresh');$('#R .excel .dlg').classList.add('on');await sleep(1400);$('#R .excel .dlg').classList.remove('on');
     Q4S.forEach((r,i)=>{const n=i+2;[['E',0],['B',1],['C',2],['D',3]].forEach(([col,ix])=>{const c=xcell(R,col+n);c.textContent=r[ix];c.classList.add('flash');});});xcell(R,'A1');$('#R .excel .fn').textContent='Q4_GM_pack_CFO.xlsx';await sleep(1500);};
-  focus('L');await Promise.all([leftB7(),rightB7a()]);await untilV(18150);focus('R');await rightB7();await untilV(20700);focus(null);guard(tok);caption('');hideCursor();await sleep(500);
+  focus('L');await Promise.all([leftB7(),rightB7a()]);await untilV(18150);focus('R');await rightB7();await untilV(20100);focus(null);guard(tok);caption('');hideCursor();await sleep(300);
 
   // BEAT 8
   beat(8,'Control');guard(tok);
@@ -292,7 +292,7 @@ async function run(tok){
   beat(10,'Close');guard(tok);
   $('#dim').classList.remove('on');await sleep(300);
   P[L].style.transition='opacity .8s';P[L].style.opacity='0';
-  caption('Same AI. Different foundation.');await sleep(3000);caption('');
+  caption('Same AI. Different foundation.');await sleep(2400);caption('');
   $('#end').classList.add('on');await sleep(500);
   $('#beatlbl').textContent='End';
   paused=true;$('#play').textContent='Play';started=false;
