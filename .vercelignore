@@ -1,0 +1,7 @@
+# Dev-only files that shouldn't be served from the deployment
+.claude
+CLAUDE.md
+README.md
+.DS_Store
+*.mp4
+*.mov
