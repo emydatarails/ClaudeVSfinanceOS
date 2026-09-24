@@ -76,8 +76,15 @@ function line(body,side,cls,html){const d=document.createElement('div');d.classN
 async function caption(t){const c=$('#cap');if(!t){c.classList.remove('show');return}c.querySelector('span').textContent=t;c.classList.add('show');}
 const RUN_MS=266700; // measured length of one full run (virtual ms); used only for the progress bar. Re-measure after retiming.
 const fmt=ms=>{const t=Math.max(0,Math.round(ms/1000));return `${Math.floor(t/60)}:${String(t%60).padStart(2,'0')}`};
-setInterval(()=>{const t=started?vnow():vAcc;$('#prog').style.width=Math.min(100,t/RUN_MS*100)+'%';$('#timelbl').textContent=`${fmt(t)} / ${fmt(RUN_MS)}`;},250);
-function beat(n,t){beatT0=vnow();$('#beatlbl').textContent=`Beat ${n} — ${t}`;vo(`${n}|${t}`);}
+setInterval(()=>{const t=started?vnow():vAcc;$('#prog').style.width=Math.min(100,t/RUN_MS*100)+'%';$('#timelbl').textContent=`${fmt(t)} / ${fmt(RUN_MS)}`+(chIdx>=0?` \u00b7 ${chIdx+1} of ${CHAPTERS.length}`:'');},250);
+// Chapter names shown in the control bar, keyed like VO. Beats not listed (Setup) keep the previous chapter.
+const CHAPTERS=[['0|Opening','Intro'],['2|Turn on the connector','Connecting FinanceOS'],['2b|Under the hood','Under the Hood'],
+  ['2|The prompt','Asking the Question'],['3|Data access','Getting the Data'],['4|Consolidation','Consolidating Sources'],
+  ['5|Context','Defining the Terms'],['6|The drift','Tracing the Numbers'],['7|Repeatability + Excel','Building the CFO Pack'],
+  ['7b|Refresh','Next Month'],['8|Control','Permissions and Audit'],['9|Cost efficiency','Token Cost'],['10|Close','Wrap-Up']];
+let chIdx=-1;
+function chapter(key){const i=CHAPTERS.findIndex(c=>c[0]===key);if(i<0)return;chIdx=i;$('#beatlbl').textContent=CHAPTERS[i][1];}
+function beat(n,t){beatT0=vnow();chapter(`${n}|${t}`);vo(`${n}|${t}`);}
 
 /* narration: one clip per beat, started when the beat starts (keys are `${n}|${label}`) */
 const VO={'0|Opening':'VO_00_opening','2|Turn on the connector':'VO_01_beat2a_connector','2b|Under the hood':'VO_01b_hood',
@@ -280,7 +287,7 @@ async function run(tok){
     
     await sleep(600);paneSet(R,'Drill Down · DE bridge!B5',`<div><div class="k">COGS rate variance, Vandelay DE, Q3 FY26</div><div class="v">−118,900 = Actual COGS − Plan COGS</div></div><table><tr><th>Component</th><th>Amount</th><th>Accounts</th></tr><tr><td>Actual COGS</td><td>1,910,000</td><td>5000&ndash;5090</td></tr><tr><td>Plan COGS (v3)</td><td>1,791,100</td><td>5000&ndash;5090</td></tr></table><div><div class="k">Definition</div><div class="v">COGS excludes implementation services (opex 6200&ndash;6240)</div></div><div><div class="k">Source</div><div class="v">NetSuite GL &middot; Vandelay DE &middot; 2026-07-01 to 2026-09-30</div></div><div><div class="k">FX</div><div class="v">EUR&rarr;USD, Q3 average 1.0842</div></div><span class="lk">Open source transactions (612 rows)</span>`);
     await untilV(34000);await xbtn(R,'drill');$('#R-pane').classList.add('on');await untilV(41300);$('#R-pane').classList.remove('on');await sleep(300);
-    await untilV(42000);caption("Now imagine next month. On the left, you do all of it again: find the files, re-upload, re-explain every definition, and hope Claude applies the same logic it did last time. Over on the right, you change the period and hit Refresh. Same definitions, same sources, current numbers.");$('#beatlbl').textContent='Beat 7b — Refresh';beatT0=vnow();vo('7b|Refresh');focus('L');{const card=P[L].querySelector('.card');card.innerHTML='<h3>One month later.</h3><ul class="todo"></ul>';card.classList.add('on');}(async()=>{await sleep(1600);const ul=$('#L .card .todo');for(const t of ['Find the files again','Re-upload six exports','Re-explain every definition','Hope Claude applies the same logic']){const li=document.createElement('li');li.textContent=t;ul.appendChild(li);await sleep(60);li.classList.add('in');await sleep(1900);}})();await untilV(nextMonthRight);focus('R');
+    await untilV(42000);caption("Now imagine next month. On the left, you do all of it again: find the files, re-upload, re-explain every definition, and hope Claude applies the same logic it did last time. Over on the right, you change the period and hit Refresh. Same definitions, same sources, current numbers.");chapter('7b|Refresh');beatT0=vnow();vo('7b|Refresh');focus('L');{const card=P[L].querySelector('.card');card.innerHTML='<h3>One month later.</h3><ul class="todo"></ul>';card.classList.add('on');}(async()=>{await sleep(1600);const ul=$('#L .card .todo');for(const t of ['Find the files again','Re-upload six exports','Re-explain every definition','Hope Claude applies the same logic']){const li=document.createElement('li');li.textContent=t;ul.appendChild(li);await sleep(60);li.classList.add('in');await sleep(1900);}})();await untilV(nextMonthRight);focus('R');
     await xsheet(R,0);await sleep(300);await xselect(R,'G1','Q3 FY26');await sleep(500);const g1=xcell(R,'G1');g1.classList.add('edit');g1.textContent='';const t='Q4 FY26';for(const ch of t){g1.textContent+=ch;$(`#R-fb`).textContent=g1.textContent;await sleep(110);}await sleep(400);g1.classList.remove('edit');await xbtn(R,'refresh');$('#R .excel .dlg').classList.add('on');await sleep(1400);$('#R .excel .dlg').classList.remove('on');
     Q4S.forEach((r,i)=>{const n=i+2;[['E',0],['B',1],['C',2],['D',3]].forEach(([col,ix])=>{const c=xcell(R,col+n);c.textContent=r[ix];c.classList.add('flash');});});xcell(R,'A1');$('#R .excel .fn').textContent='Q4_GM_pack_CFO.xlsx';await sleep(1500);};
   focus('L');await Promise.all([leftB7(),rightB7a()]);await untilV(18150);focus('R');await rightB7();await untilV(20100);focus(null);guard(tok);caption('');hideCursor();await sleep(300);
@@ -317,7 +324,7 @@ async function run(tok){
   P[L].style.transition='opacity .8s';P[L].style.opacity='0';
   caption('Same AI. Different foundation.');await sleep(2400);caption('');
   $('#end').classList.add('on');await sleep(500);
-  $('#beatlbl').textContent='End';
+  $('#beatlbl').textContent='Complete';chIdx=-1;
   started=false;setPaused(true);
 }
 

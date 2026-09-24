@@ -19,7 +19,7 @@ A scripted marketing animation, "Claude vs Claude + FinanceOS" (Datarails). It's
   - Token counters are estimates: text length/4, file rows × `TOK_PER_ROW`, and tool definitions counted once (1200).
 - The data is fictional (the "Vandelay" entities). Left and right numbers differ on purpose (for example DE 52.8% vs 54.3%). Keep the tables, the drift box, the lineage panel and the Excel sheets consistent with each other.
 
-- Control bar (`#ctl`): Datarails-branded (navy card, yellow pills, Poppins, logos). The progress bar uses `RUN_MS`, which is measured by hand. If you retime the run, update it.
+- Control bar (`#ctl`): Datarails-branded (navy card, yellow pills, Poppins, logos). It shows chapter names from `CHAPTERS` (keyed like `VO`), not the internal beat labels. If you add a beat, add it to `CHAPTERS` too. The progress bar uses `RUN_MS`, which is measured by hand. If you retime the run, update it.
 - Static stretches are filled with visuals timed to the VO phrase: consolidation steps in beat 4, lineage rows in beat 5, estimate marks in beat 6, and the audit log in beat 8. Their `untilV` marks come from pauses in the clips (`ffmpeg ... silencedetect`).
 - Testing in a hidden browser pane: Chrome throttles timers in hidden tabs, so the script crawls. That's the test environment, not a bug.
 
