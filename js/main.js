@@ -11,7 +11,7 @@ const FOSLOGO='assets/financeos-badge.png';
 let beatT0=0,vAcc=0,vLast=performance.now();
 function vtick(){const n=performance.now();if(!paused&&!seeking)vAcc+=(n-vLast)*speed;vLast=n;}
 function vnow(){vtick();return vAcc;}
-function setPaused(p){vtick();paused=p;playUI();voSync();}
+function setPaused(p){vtick();paused=p;playUI();voSync();sfxSync();}
 function setSpeed(v){vtick();speed=v;$$('#speed button').forEach(b=>b.classList.toggle('on',+b.dataset.v===v));voSync();}
 // Every sleep has an absolute virtual end time and belongs to the run that created it; a restart rejects stale sleeps.
 // While seeking (chapter jump or timeline scrub), sleeps go into a queue that is drained in virtual-time order as fast as possible.
@@ -41,7 +41,7 @@ function moveCursorTo(el,dx=0,dy=0){
   cur.style.left=((r.left-sr.left)/sc + r.width/(2*sc)+dx)+'px';
   cur.style.top=((r.top-sr.top)/sc + r.height/(2*sc)+dy)+'px';
 }
-async function click(el,dx,dy){moveCursorTo(el,dx,dy);await sleep(430);cur.classList.add('click');await sleep(170);cur.classList.remove('click');}
+async function click(el,dx,dy,snd){moveCursorTo(el,dx,dy);await sleep(430);cur.classList.add('click');if(snd)sfx(snd);await sleep(170);cur.classList.remove('click');}
 function hideCursor(){cur.style.left='-100px';cur.style.top='-100px';}
 
 function scrollMsgs(side){const m=P[side].querySelector('.msgs');m.scrollTop=m.scrollHeight;}
@@ -50,7 +50,7 @@ function clearGreet(side){const g=P[side].querySelector('.greet');if(g)g.remove(
 async function type(side,text,cps=38){
   const ta=P[side].querySelector('.ta'), send=P[side].querySelector('.send');
   ta.classList.add('cursorblink');
-  for(let i=0;i<text.length;i++){ta.textContent+=text[i];send.classList.add('on');await sleep(1000/cps+ (text[i]===' '?18:0));}
+  for(let i=0;i<text.length;i++){ta.textContent+=text[i];sfxKey('chat',i===text.length-1);send.classList.add('on');await sleep(1000/cps+ (text[i]===' '?18:0));}
   ta.classList.remove('cursorblink');
 }
 async function send(side){
@@ -66,7 +66,7 @@ const TOK_PER_ROW=20; // ~8 short columns at ~2.5 tokens per cell
 async function files(side,names,gap=650){
   clearGreet(side);
   const msgs=P[side].querySelector('.msgs');const wrap=document.createElement('div');wrap.className='files';msgs.appendChild(wrap);
-  for(const n of names){const c=document.createElement('div');c.className='fchip';const rows=ROWS[n]||300;c.innerHTML=`<span class="ic ${n.endsWith('.csv')?'csv':''}">${n.endsWith('.csv')?'CSV':'X'}</span>${n}<span style="color:#8a867b">&middot; ${rows.toLocaleString()} rows</span>`;wrap.appendChild(c);scrollMsgs(side);await sleep(40);c.classList.add('in');addTok(side,rows*TOK_PER_ROW);await sleep(gap);}
+  for(const n of names){const c=document.createElement('div');c.className='fchip';const rows=ROWS[n]||300;c.innerHTML=`<span class="ic ${n.endsWith('.csv')?'csv':''}">${n.endsWith('.csv')?'CSV':'X'}</span>${n}<span style="color:#8a867b">&middot; ${rows.toLocaleString()} rows</span>`;wrap.appendChild(c);scrollMsgs(side);await sleep(40);c.classList.add('in');sfx('click');addTok(side,rows*TOK_PER_ROW);await sleep(gap);}
 }
 const AV=`<div class="av"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/></svg></div>`;
 function newAssistant(side){const msgs=P[side].querySelector('.msgs');const a=document.createElement('div');a.className='a';a.innerHTML=AV+'<div class="body"></div>';msgs.appendChild(a);scrollMsgs(side);return a.querySelector('.body');}
@@ -133,6 +133,23 @@ async function voWait(){const a=voCur;if(!a||seeking)return;const t0=vnow();
   while(voCur===a&&!a.ended&&!a.error&&(!a.paused||paused)&&vnow()-t0<VO_WAIT_MAX)await sleep(40);
   if(voCur===a&&a.endV!=null){const since=vnow()-a.endV;if(since<VO_TAIL)await sleep(VO_TAIL-since);}}
 function voSync(){if(!voCur)return;voCur.playbackRate=speed;if(paused||!voOn)voCur.pause();else if(!voCur.ended&&voCur.src)voCur.play().catch(()=>{});}
+
+/* sound effects on Web Audio, fired from the script itself so they land on the exact frame of the visual.
+   Typing: each typed character plays one keystroke from sfx_keys.wav (32 keys in 100ms slots), at most one per SFX_KEY_GAP
+   of virtual time per typist, so the clatter starts on the first character and stops on the last at any speed.
+   Click: sfx_click.wav when a file chip lands in the chat and when the cursor clicks a file to open it.
+   Nothing plays while seeking; the context is suspended while paused. */
+let sfxOn=true;const SFX_REV=1,SFX_KEYS=32,SFX_SLOT=.1,SFX_KEY_GAP=55,SFX_GAIN={key:.5,click:.45};
+const AC=window.AudioContext||window.webkitAudioContext,actx=AC?new AC():null,sfxBuf={},sfxLastKey={};
+if(actx)for(const n of ['keys','click'])fetch(`audio/sfx_${n}.wav?v=${SFX_REV}`).then(r=>r.arrayBuffer()).then(b=>actx.decodeAudioData(b)).then(d=>{sfxBuf[n]=d}).catch(()=>{});
+function sfxSync(){if(!actx)return;if(paused)actx.suspend().catch(()=>{});else actx.resume().catch(()=>{});}
+function sfxPlay(buf,gain,offset=0,dur){if(!actx||!buf||!sfxOn||seeking||paused)return;const t=actx.currentTime,g=actx.createGain(),src=actx.createBufferSource();
+  src.buffer=buf;g.gain.value=gain;src.connect(g).connect(actx.destination);src.start(t,offset,dur);}
+const sfx=n=>sfxPlay(sfxBuf[n],SFX_GAIN[n]);
+// Call once per typed character. who = the typist ('chat', 'intro', 'xl'); both chat boxes share one, so the prompt typed into both at once isn't doubled.
+// last=true on the final character: it always sounds (if 25ms clear of the previous key), so the typing ends on it.
+function sfxKey(who,last){const now=vnow();if(now-(sfxLastKey[who]??-1e9)<(last?25:SFX_KEY_GAP))return;sfxLastKey[who]=now;
+  sfxPlay(sfxBuf.keys,SFX_GAIN.key*(.8+Math.random()*.2),Math.floor(Math.random()*SFX_KEYS)*SFX_SLOT,SFX_SLOT);}
 
 /* excel */
 function buildExcel(side,cfg){
@@ -215,8 +232,8 @@ async function run(tok){
   P.L.classList.add('off');P.R.classList.add('off');$('#in1').textContent='';$('#in2').textContent='';$('#intro').classList.add('on');
   caption("What actually changes when you connect Claude to your financial data? Same Claude, same question, same finance team.");
   await sleep(600);
-  {const a=$('#in1');a.classList.add('cursorblink');for(const ch of 'Two Claudes. Same question.'){a.textContent+=ch;await sleep(55);}a.classList.remove('cursorblink');await sleep(900);
-   const b=$('#in2');b.classList.add('cursorblink');for(const ch of 'One of them has FinanceOS.'){b.textContent+=ch;await sleep(55);}b.classList.remove('cursorblink');b.innerHTML='One of them has <b>FinanceOS.</b>';await sleep(2200);}
+  {const a=$('#in1');a.classList.add('cursorblink');{let i=0;const s1='Two Claudes. Same question.';for(const ch of s1){a.textContent+=ch;sfxKey('intro',++i===s1.length);await sleep(55);}}a.classList.remove('cursorblink');await sleep(900);
+   const b=$('#in2');b.classList.add('cursorblink');{let i=0;const s2='One of them has FinanceOS.';for(const ch of s2){b.textContent+=ch;sfxKey('intro',++i===s2.length);await sleep(55);}}b.classList.remove('cursorblink');b.innerHTML='One of them has <b>FinanceOS.</b>';await sleep(2200);}
   $('#intro').classList.remove('on');await sleep(800);
   caption("Left, Claude working from whatever you hand it. Right, Claude connected to Datarails FinanceOS.");
   P.L.classList.remove('off');await sleep(500);P.R.classList.remove('off');await untilV(16300);caption('');await sleep(300);
@@ -308,10 +325,10 @@ async function run(tok){
   const BR_R=[['Plan GM$','2,424,400'],['Revenue volume','−38,600'],['Revenue mix','+12,300'],['COGS rate','−118,900'],['FX','−9,200'],['Actual GM$','2,270,000']];
   const BR_L=[['Plan GM$','2,424,400'],['Revenue volume','−41,100'],['Revenue mix','+9,800'],['COGS rate','−148,200'],['FX','−37,500'],['Actual GM$','2,207,400']];
   const Q4S=[['+58,100','60.5%','60.4%','−0.1'],['−12,600','59.5%','59.1%','−0.4'],['−49,800','58.0%','56.8%','−1.2'],['+24,900','61.0%','62.2%','+1.2']];
-  const leftB7=async()=>{await sleep(800);const b=newAssistant(L);await stream(b,L,"Done. A few notes: the monthly plan wasn't in the file I have, so I spread the quarterly plan evenly across the three months. The monthly figures use the FX rate I estimated earlier. The bridge is based on the mapping you gave me for 'Services'; let me know if COGS should include anything else.",26);const f=line(b,L,'','<div class="fchip in" style="display:inline-flex;margin-top:6px"><span class="ic">X</span>Q3_GM_pack_CFO.xlsx</div>');await sleep(900);await click(f.firstChild);
+  const leftB7=async()=>{await sleep(800);const b=newAssistant(L);await stream(b,L,"Done. A few notes: the monthly plan wasn't in the file I have, so I spread the quarterly plan evenly across the three months. The monthly figures use the FX rate I estimated earlier. The bridge is based on the mapping you gave me for 'Services'; let me know if COGS should include anything else.",26);const f=line(b,L,'','<div class="fchip in" style="display:inline-flex;margin-top:6px"><span class="ic">X</span>Q3_GM_pack_CFO.xlsx</div>');sfx('click');await sleep(900);await click(f.firstChild,0,0,'click');
     buildExcel(L,{name:'Q3_GM_pack_CFO.xlsx',sheets:[{name:'Summary',w:W1,cells:sumCells(SUM_L,false)},{name:'Monthly trend',cells:trendCells(TR_L)},{name:'DE bridge',w:{A:170,B:100},cells:bridgeCells(BR_L)}]});P[L].querySelector('.excel').classList.add('on');await sleep(1000);await xselect(L,'E4','−217,400');await sleep(800);await xsheet(L,2);await sleep(300);await xselect(L,'B5','-148200');await sleep(1500);hideCursor();};
-  let f7=null;const rightB7a=async()=>{await sleep(1500);const b=newAssistant(R);const t7=tool(b,R,'export_workbook &middot; 3 sheets &middot; Excel-connected (DR.GET)');await sleep(2000);toolDone(t7,R,180);await stream(b,R,'Done. Three sheets, all connected to FinanceOS. Change the period cell and everything refreshes.',13);f7=line(b,R,'','<div class="fchip in" style="display:inline-flex;margin-top:6px"><span class="ic">X</span>Q3_GM_pack_CFO.xlsx</div>');};
-  const rightB7=async()=>{const f=f7;await click(f.firstChild);
+  let f7=null;const rightB7a=async()=>{await sleep(1500);const b=newAssistant(R);const t7=tool(b,R,'export_workbook &middot; 3 sheets &middot; Excel-connected (DR.GET)');await sleep(2000);toolDone(t7,R,180);await stream(b,R,'Done. Three sheets, all connected to FinanceOS. Change the period cell and everything refreshes.',13);f7=line(b,R,'','<div class="fchip in" style="display:inline-flex;margin-top:6px"><span class="ic">X</span>Q3_GM_pack_CFO.xlsx</div>');sfx('click');};
+  const rightB7=async()=>{const f=f7;await click(f.firstChild,0,0,'click');
     buildExcel(R,{name:'Q3_GM_pack_CFO.xlsx',conn:true,sheets:[{name:'Summary',w:W1,cells:sumCells(SUM_R,true)},{name:'Monthly trend',cells:trendCells(TR_R)},{name:'DE bridge',w:{A:170,B:100},cells:bridgeCells(BR_R)}]});P[R].querySelector('.excel').classList.add('on');await sleep(600);await xselect(R,'E4','=DR.GET( … )');
     caption("Over on the right, every cell is a live DR.GET formula. Think of a VLOOKUP, but instead of searching a range in your workbook, it reaches straight into FinanceOS. Give it the metric, the entity and the period, and it returns the governed number, live, and connected to its source. Drill Down on the bridge shows you the accounts behind it.");
     {const grid=$('#R .excel .grid');const card=document.createElement('div');card.className='fxcard';card.innerHTML='<h5>Excel-connected formula</h5><div class="big">DR.GET</div><div class="ln" id="fx-l1">Like a VLOOKUP, but it doesn\'t search a range in your workbook.</div><div class="ln" id="fx-l2">It reaches straight into FinanceOS.</div><div class="lbls"><span class="lb" id="lb-m">metric</span><span class="lb" id="lb-e">entity</span><span class="lb" id="lb-p">period</span></div><div class="res" id="fx-res">and returns the <b>governed number</b> · live · connected to its source</div>';grid.appendChild(card);
@@ -325,7 +342,7 @@ async function run(tok){
     await sleep(600);paneSet(R,'Drill Down · DE bridge!B5',`<div><div class="k">COGS rate variance, Vandelay DE, Q3 FY26</div><div class="v">−118,900 = Actual COGS − Plan COGS</div></div><table><tr><th>Component</th><th>Amount</th><th>Accounts</th></tr><tr><td>Actual COGS</td><td>1,910,000</td><td>5000&ndash;5090</td></tr><tr><td>Plan COGS (v3)</td><td>1,791,100</td><td>5000&ndash;5090</td></tr></table><div><div class="k">Definition</div><div class="v">COGS excludes implementation services (opex 6200&ndash;6240)</div></div><div><div class="k">Source</div><div class="v">NetSuite GL &middot; Vandelay DE &middot; 2026-07-01 to 2026-09-30</div></div><div><div class="k">FX</div><div class="v">EUR&rarr;USD, Q3 average 1.0842</div></div><span class="lk">Open source transactions (612 rows)</span>`);
     await untilV(34000);await xbtn(R,'drill');$('#R-pane').classList.add('on');await untilV(41300);$('#R-pane').classList.remove('on');await sleep(300);
     await untilV(42200);await voWait();caption("Now imagine next month. On the left, you do all of it again: find the files, re-upload, re-explain every definition, and hope Claude applies the same logic it did last time. Over on the right, you change the period and hit Refresh. Same definitions, same sources, current numbers.");chapter('7b|Refresh');beatT0=vnow();vo('7b|Refresh');focus('L');{const card=P[L].querySelector('.card');card.innerHTML='<h3>One month later.</h3><ul class="todo"></ul>';card.classList.add('on');}(async()=>{await sleep(1600);const ul=$('#L .card .todo');for(const t of ['Find the files again','Re-upload six exports','Re-explain every definition','Hope Claude applies the same logic']){const li=document.createElement('li');li.textContent=t;ul.appendChild(li);await sleep(60);li.classList.add('in');await sleep(1900);}})();await untilV(nextMonthRight);focus('R');
-    await xsheet(R,0);await sleep(300);await xselect(R,'G1','Q3 FY26');await sleep(500);const g1=xcell(R,'G1');g1.classList.add('edit');g1.textContent='';const t='Q4 FY26';for(const ch of t){g1.textContent+=ch;$(`#R-fb`).textContent=g1.textContent;await sleep(110);}await sleep(400);g1.classList.remove('edit');await xbtn(R,'refresh');$('#R .excel .dlg').classList.add('on');await sleep(1400);$('#R .excel .dlg').classList.remove('on');
+    await xsheet(R,0);await sleep(300);await xselect(R,'G1','Q3 FY26');await sleep(500);const g1=xcell(R,'G1');g1.classList.add('edit');g1.textContent='';const t='Q4 FY26';for(const ch of t){g1.textContent+=ch;sfxKey('xl');$(`#R-fb`).textContent=g1.textContent;await sleep(110);}await sleep(400);g1.classList.remove('edit');await xbtn(R,'refresh');$('#R .excel .dlg').classList.add('on');await sleep(1400);$('#R .excel .dlg').classList.remove('on');
     Q4S.forEach((r,i)=>{const n=i+2;[['E',0],['B',1],['C',2],['D',3]].forEach(([col,ix])=>{const c=xcell(R,col+n);c.textContent=r[ix];c.classList.add('flash');});});xcell(R,'A1');$('#R .excel .fn').textContent='Q4_GM_pack_CFO.xlsx';await sleep(1500);};
   focus('L');await Promise.all([leftB7(),rightB7a()]);await untilV(18150);focus('R');await rightB7();await untilV(20100);focus(null);guard(tok);caption('');hideCursor();await sleep(300);
 
@@ -378,7 +395,7 @@ async function run(tok){
 
 /* ---------- controls ---------- */
 function playUI(){const on=started&&!paused;$('#play').classList.toggle('playing',on);$('#playlbl').textContent=on?'Pause':'Play';$('#play').setAttribute('aria-label',on?'Pause':'Play');}
-function start(target,t,keepPaused){runToken++;const tok=runToken;seekQ.length=0;started=true;
+function start(target,t,keepPaused){runToken++;const tok=runToken;seekQ.length=0;started=true;for(const k in sfxLastKey)delete sfxLastKey[k];
   if(t>0){vtick();seeking='@time';seekT=t;stage.classList.add('seeking');$('#seekname').textContent=chapterAt(t);}
   else if(target&&target!==CHAPTERS[0][0]){vtick();seeking=target;stage.classList.add('seeking');$('#seekname').textContent=CHAPTERS.find(c=>c[0]===target)[1];}else endSeek(true);
   setPaused(!!keepPaused);run(tok).catch(e=>{if(e.message!=='restart')console.error(e)});}
@@ -408,7 +425,8 @@ $('#restart').onclick=()=>jumpTo(CHAPTERS[0][0]);
 $$('#speed button').forEach(b=>b.onclick=()=>setSpeed(+b.dataset.v));
 $('#vochk').onchange=e=>{voOn=e.target.checked;voSync();};
 $('#capchk').onchange=e=>$('#cap').classList.toggle('hidden',!e.target.checked);
+$('#sfxchk').onchange=e=>{sfxOn=e.target.checked;};
 $('#cap').classList.add('hidden');buildChap();
-{const q=new URLSearchParams(location.search);if(q.get('speed'))setSpeed(+q.get('speed'));if(q.get('rec')){$('#ctl').classList.add('hide');$('#chap').classList.add('hide');stage.classList.add('recording');fit()}if(q.get('cap'))$('#cap').classList.remove('hidden');if(q.get('vo')==='0'){voOn=false;$('#vochk').checked=false;}if(q.get('anim')){const r=+q.get('anim');setInterval(()=>{for(const an of document.getAnimations()){if(an.playbackRate!==r)an.playbackRate=r;}},25);}if(q.get('auto'))setTimeout(start,600);}
+{const q=new URLSearchParams(location.search);if(q.get('speed'))setSpeed(+q.get('speed'));if(q.get('rec')){$('#ctl').classList.add('hide');$('#chap').classList.add('hide');stage.classList.add('recording');fit()}if(q.get('cap'))$('#cap').classList.remove('hidden');if(q.get('vo')==='0'){voOn=false;$('#vochk').checked=false;}if(q.get('sfx')==='0'){sfxOn=false;$('#sfxchk').checked=false;}if(q.get('anim')){const r=+q.get('anim');setInterval(()=>{for(const an of document.getAnimations()){if(an.playbackRate!==r)an.playbackRate=r;}},25);}if(q.get('auto'))setTimeout(start,600);}
 if(voOn)voPreload();
 addEventListener('keydown',e=>{if(e.code==='Space'){e.preventDefault();$('#play').click()}if(e.key==='r'||e.key==='R')$('#restart').click();if(e.key==='h'||e.key==='H'){$('#ctl').classList.toggle('hide');$('#chap').classList.toggle('hide',$('#ctl').classList.contains('hide'));stage.classList.toggle('recording');fit()}});
