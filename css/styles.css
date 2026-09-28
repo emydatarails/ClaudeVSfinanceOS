@@ -313,11 +313,23 @@ table.t tr.hl.good td{background:#e3f5e8}
 @keyframes clk{40%{transform:scale(.85)}}
 
 /* controls */
-#ctl{position:fixed;left:0;right:0;bottom:16px;margin:0 auto;width:max-content;z-index:100;box-sizing:border-box;max-width:calc(100vw - 32px);background:var(--dr-navy);border:1px solid var(--dr-line);border-radius:18px;box-shadow:0 20px 50px rgba(0,0,0,.45);font-family:Poppins,sans-serif;color:#fff;overflow:hidden;transition:opacity .3s}
+#ctl{position:fixed;left:0;right:0;bottom:16px;margin:0 auto;width:max-content;z-index:100;box-sizing:border-box;max-width:calc(100vw - 32px);background:var(--dr-navy);border:1px solid var(--dr-line);border-radius:18px;box-shadow:0 20px 50px rgba(0,0,0,.45);font-family:Poppins,sans-serif;color:#fff;transition:opacity .3s}
 #ctl.hide{opacity:0;pointer-events:none}
-#ctl .ctl-prog{height:3px;background:rgba(255,255,255,.08)}
-#ctl .ctl-prog i{display:block;height:100%;width:0;background:var(--dr-yellow);transition:width .25s linear}
-#ctl .ctl-row{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:10px 22px;padding:12px 20px 13px}
+#ctl .ctl-scrub{position:relative;height:20px;margin:8px 20px 0;cursor:pointer;touch-action:none;outline:none}
+#ctl .ctl-scrub .trk{position:absolute;left:0;right:0;top:8px;height:4px;border-radius:999px;background:rgba(255,255,255,.12);overflow:hidden;transition:top .15s,height .15s}
+#ctl .ctl-scrub:hover .trk,#ctl .ctl-scrub.drag .trk{top:7px;height:6px}
+#ctl .ctl-scrub .hov{position:absolute;left:0;top:0;bottom:0;width:0;background:rgba(255,255,255,.14);opacity:0}
+#ctl .ctl-scrub.tipon .hov{opacity:1}
+#ctl .ctl-scrub #prog{position:absolute;left:0;top:0;bottom:0;width:0;background:var(--dr-yellow)}
+#ctl .ctl-scrub .ticks i{position:absolute;top:0;bottom:0;width:2px;margin-left:-1px;background:var(--dr-navy)}
+#ctl .ctl-scrub .head{position:absolute;top:4px;left:0;width:12px;height:12px;margin-left:-6px;border-radius:50%;background:var(--dr-yellow);box-shadow:0 0 0 4px rgba(255,163,15,.22),0 2px 6px rgba(0,0,0,.4);transform:scale(.85);transition:transform .15s;pointer-events:none}
+#ctl .ctl-scrub:hover .head,#ctl .ctl-scrub.drag .head{transform:scale(1.2)}
+#ctl .ctl-scrub.drag{cursor:grabbing}
+#ctl .ctl-scrub:focus-visible .head{outline:2px solid #fff;outline-offset:3px}
+#ctl .ctl-scrub .stip{position:absolute;bottom:26px;left:0;transform:translateX(-50%);display:flex;gap:8px;align-items:baseline;padding:6px 11px;border-radius:9px;background:var(--dr-cream);color:var(--dr-navy);font:400 12.5px/1 Poppins,sans-serif;white-space:nowrap;box-shadow:0 8px 24px rgba(0,0,0,.35);opacity:0;pointer-events:none;transition:opacity .12s}
+#ctl .ctl-scrub .stip b{font-weight:600;font-variant-numeric:tabular-nums}
+#ctl .ctl-scrub.tipon .stip{opacity:1}
+#ctl .ctl-row{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:10px 22px;padding:6px 20px 13px}
 #ctl .ctl-brand{display:flex;align-items:center;gap:12px}
 #ctl .ctl-brand .dr{height:24px;display:block}
 #ctl .ctl-brand .fos{height:20px;display:block}
