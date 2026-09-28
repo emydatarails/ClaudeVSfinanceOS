@@ -105,13 +105,6 @@ table.t tr.hl.good td{background:#e3f5e8}
 .tool .sp{width:14px;height:14px;border:2px solid var(--dr-pink);border-top-color:transparent;border-radius:50%;animation:spin .8s linear infinite;flex:none}
 .tool .ok{display:none;color:#2e9e5b;font-weight:700}
 .tool.done .sp{display:none} .tool.done .ok{display:inline}
-.card.limits{gap:18px;align-items:flex-start;padding:60px 70px;justify-content:center}
-.card.limits h3{font-size:34px;color:#fff}
-.card.limits ul{list-style:none;margin:6px 0 0;padding:0;display:flex;flex-direction:column;gap:14px}
-.card.limits li{font-size:22px;color:#D7DAE6;opacity:0;transform:translateY(8px);transition:all .5s cubic-bezier(.2,.8,.2,1);padding-left:34px;position:relative;text-align:left}
-.card.limits li::before{content:'';position:absolute;left:0;top:9px;width:16px;height:16px;border-radius:50%;border:2px solid #8A93B0}
-.card.limits li::after{content:'';position:absolute;left:4px;top:13px;width:8px;height:8px;background:#8A93B0;border-radius:1px;transform:rotate(45deg)}
-.card.limits li.in{opacity:1;transform:none}
 #tokens .pct{position:absolute;left:50%;top:26%;transform:translate(-50%,-50%) scale(.9);width:280px;height:280px;border-radius:50%;background:var(--dr-yellow);color:var(--dr-navy);display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:Poppins,sans-serif;box-shadow:0 30px 80px rgba(0,0,0,.45);opacity:0;transition:all .6s cubic-bezier(.2,.8,.2,1);z-index:2}
 #tokens .pct.in{opacity:1;transform:translate(-50%,-50%) scale(1)}
 #tokens .pct b{font-size:84px;font-weight:600;letter-spacing:-.05em;line-height:1;font-variant-numeric:tabular-nums}
@@ -398,15 +391,7 @@ table.t tr.hl.good td{background:#e3f5e8}
 #chap li.on button{background:var(--dr-navy-soft);color:#fff;font-weight:600}
 #chap li.on .n{background:var(--dr-yellow);border-color:var(--dr-yellow);color:var(--dr-navy)}
 
-/* beat 8, audit trail: find bar + hits on the left, activity log card on the right */
-.finder{position:absolute;top:66px;right:20px;z-index:4;display:flex;align-items:center;gap:10px;background:#fff;border:1px solid var(--c-line);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);padding:8px 12px;font-size:14px;color:var(--c-ink);opacity:0;transform:translateY(-6px);transition:all .3s}
-.finder.on{opacity:1;transform:none}
-.finder svg{width:16px;height:16px;stroke:var(--c-ink2);fill:none;stroke-width:2;stroke-linecap:round}
-.finder .q{min-width:76px;font-family:Consolas,Menlo,monospace}
-.finder .q:empty::before{content:"Find in chat";color:#a39f94;font-family:inherit}
-.finder .cnt{color:var(--c-ink2);font-size:12.5px;min-width:72px;text-align:right}
-mark.hit{background:#ffe27a;color:inherit;border-radius:3px;padding:0 2px;transition:background .25s}
-mark.hit.cur{background:var(--dr-yellow)}
+/* beat 8, audit trail: activity log card on the right */
 .card.log{gap:10px;padding:60px 70px;justify-content:center;align-items:stretch;text-align:left}
 .card.log h3{font-size:30px;margin-bottom:8px}
 .card.log .lrow{display:grid;grid-template-columns:70px 100px 1fr 190px;gap:14px;align-items:center;padding:10px 14px;border-radius:10px;border:1px solid var(--dr-line);background:var(--dr-navy-soft);font-size:14.5px;opacity:0;transform:translateY(6px);transition:opacity .4s,transform .4s}
