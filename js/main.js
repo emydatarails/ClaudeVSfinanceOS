@@ -14,10 +14,11 @@ function vnow(){vtick();return vAcc;}
 function setPaused(p){vtick();paused=p;playUI();voSync();}
 function setSpeed(v){vtick();speed=v;$$('#speed button').forEach(b=>b.classList.toggle('on',+b.dataset.v===v));voSync();}
 // Every sleep has an absolute virtual end time and belongs to the run that created it; a restart rejects stale sleeps.
-// While seeking (chapter jump), sleeps go into a queue that is drained in virtual-time order as fast as possible.
-let seeking=null;const seekQ=[];
+// While seeking (chapter jump or timeline scrub), sleeps go into a queue that is drained in virtual-time order as fast as possible.
+// A chapter seek ends when chapter(key) reaches the target; a time seek (seekT) ends before the first sleep that would pass it.
+let seeking=null,seekT=null;const seekQ=[];
 const seekCh=new MessageChannel();seekCh.port1.onmessage=pumpSeek;
-function pumpSeek(){if(!seeking||!seekQ.length)return;seekQ.sort((a,b)=>a.end-b.end);const it=seekQ.shift();if(it.tok!==runToken){it.rej(new Error('restart'))}else{vAcc=Math.max(vAcc,it.end);it.r();}seekCh.port2.postMessage(0);}
+function pumpSeek(){if(!seeking||!seekQ.length)return;seekQ.sort((a,b)=>a.end-b.end);if(seekT!=null&&seekQ[0].end>seekT){vAcc=seekT;endSeek();return;}const it=seekQ.shift();if(it.tok!==runToken){it.rej(new Error('restart'))}else{vAcc=Math.max(vAcc,it.end);it.r();}seekCh.port2.postMessage(0);}
 function waitReal(it){const step=()=>{if(it.tok!==runToken){it.rej(new Error('restart'));return}const rem=it.end-vnow();if(rem<=0){it.r();return}setTimeout(step,paused?60:Math.min(rem/speed,250))};step();}
 const sleep=ms=>new Promise((r,rej)=>{const it={end:vnow()+ms,r,rej,tok:runToken};if(seeking){seekQ.push(it);seekCh.port2.postMessage(0);}else waitReal(it);});
 // Tween fn(eased 0..1) over ms of virtual time.
@@ -86,12 +87,16 @@ function line(body,side,cls,html){const d=document.createElement('div');d.classN
 async function caption(t){const c=$('#cap');if(!t){c.classList.remove('show');return}c.querySelector('span').textContent=t;c.classList.add('show');}
 const RUN_MS=257310; // measured length of one full run (virtual ms); used only for the progress bar. Re-measure after retiming.
 const fmt=ms=>{const t=Math.max(0,Math.round(ms/1000));return `${Math.floor(t/60)}:${String(t%60).padStart(2,'0')}`};
-setInterval(()=>{const t=started?vnow():vAcc;$('#prog').style.width=Math.min(100,t/RUN_MS*100)+'%';$('#timelbl').textContent=`${fmt(t)} / ${fmt(RUN_MS)}`+(chIdx>=0?` \u00b7 ${chIdx+1} of ${CHAPTERS.length}`:'');},250);
 // Chapter names shown in the control bar, keyed like VO. Beats not listed (Setup) keep the previous chapter.
 const CHAPTERS=[['0|Opening','Intro'],['2|Turn on the connector','Connecting FinanceOS'],['2b|Under the hood','Under the Hood'],
   ['2|The prompt','Asking the Question'],['3|Data access','Getting the Data'],['4|Consolidation','Consolidating Sources'],
   ['5|Context','Defining the Terms'],['6|The drift','Tracing the Numbers'],['7|Repeatability + Excel','Building the CFO Pack'],
   ['7b|Refresh','Next Month'],['8|Audit','Audit Trail'],['9|Cost efficiency','Token Cost'],['10|Close','Wrap-Up']];
+// Chapter start times (virtual ms) on the canonical timeline, as a seek pass produces them. Used for the timeline ticks and hover labels.
+// Re-measure after retiming, together with RUN_MS.
+const CH_MS={'0|Opening':0,'2|Turn on the connector':16600,'2b|Under the hood':21300,'2|The prompt':48650,'3|Data access':50853,'4|Consolidation':71303,
+  '5|Context':100553,'6|The drift':128403,'7|Repeatability + Excel':156303,'7b|Refresh':198303,'8|Audit':218803,'9|Cost efficiency':239913,'10|Close':254113};
+const chapterAt=t=>{let n=CHAPTERS[0][1];for(const [k,nm] of CHAPTERS)if(CH_MS[k]<=t)n=nm;return n;};
 let chIdx=-1;
 function chapUI(){$$('#chap li').forEach((li,i)=>{li.classList.toggle('on',i===chIdx);li.classList.toggle('done',chIdx>=0&&i<chIdx);});}
 function buildChap(){$('#chap ol').innerHTML=CHAPTERS.map(([k,n],i)=>`<li><button data-k="${k}"><span class="n">${String(i+1).padStart(2,'0')}</span><span class="t">${n}</span></button></li>`).join('');
@@ -106,10 +111,17 @@ const VO={'0|Opening':'VO_00_opening_Despina_v2','2|Turn on the connector':'VO_0
   '6|The drift':'VO_05_beat6_drift_Despina_v2','7|Repeatability + Excel':'VO_06_beat7a_excel_Despina_v2','7b|Refresh':'VO_07_beat7b_nextmonth_Despina_v2',
   '8|Audit':'VO_08_beat8_audit_Despina_v5','9|Cost efficiency':'VO_09_beat9_cost_Despina_v2','10|Close':'VO_10_beat10_close_Despina_v2'};
 const VO_REV=5; // bump after editing any clip so browsers don't play a cached copy
-let voOn=true,voCur=null;
+let voOn=true,voCur=null,voKey=null,voT0=0;
 function voStop(){if(voCur){voCur.pause();voCur=null;}}
-function vo(key){const f=VO[key];if(!f)return;voStop();if(!voOn||seeking)return;const a=new Audio(`audio/${f}.wav?v=${VO_REV}`);a.preservesPitch=true;a.playbackRate=speed;voCur=a;if(!paused)a.play().catch(()=>{});}
-function voSync(){if(!voCur)return;voCur.playbackRate=speed;if(paused||!voOn)voCur.pause();else if(!voCur.ended)voCur.play().catch(()=>{});}
+// off>0 resumes the current clip part-way through (after a timeline scrub lands mid-beat).
+function vo(key,off=0){const f=VO[key];if(!f)return;voStop();if(!off){voKey=key;voT0=vnow();}if(!voOn||seeking)return;if(off){voResume(f);return;}const a=new Audio(`audio/${f}.wav?v=${VO_REV}`);a.preservesPitch=true;a.playbackRate=speed;voCur=a;if(!paused)a.play().catch(()=>{});}
+// Resume a clip part-way through. It plays from a cached blob URL because a server without range requests (python http.server)
+// makes the plain file unseekable in Chrome. The position is read when the clip is ready, so load time doesn't knock it out of sync.
+const voBlobs={};
+function voResume(f){const a=new Audio();a.preservesPitch=true;a.playbackRate=speed;voCur=a;
+  a.addEventListener('loadedmetadata',()=>{if(a!==voCur)return;a.currentTime=Math.min(Math.max(0,(vnow()-voT0)/1000),a.duration);if(!paused&&voOn)a.play().catch(()=>{});},{once:true});
+  (voBlobs[f]||=fetch(`audio/${f}.wav?v=${VO_REV}`).then(r=>r.blob()).then(b=>URL.createObjectURL(b))).then(u=>{if(a===voCur)a.src=u;}).catch(()=>{});}
+function voSync(){if(!voCur)return;voCur.playbackRate=speed;if(paused||!voOn)voCur.pause();else if(!voCur.ended&&voCur.src)voCur.play().catch(()=>{});}
 
 /* excel */
 function buildExcel(side,cfg){
@@ -355,11 +367,31 @@ async function run(tok){
 
 /* ---------- controls ---------- */
 function playUI(){const on=started&&!paused;$('#play').classList.toggle('playing',on);$('#playlbl').textContent=on?'Pause':'Play';$('#play').setAttribute('aria-label',on?'Pause':'Play');}
-function start(target){runToken++;const tok=runToken;seekQ.length=0;started=true;
-  if(target&&target!==CHAPTERS[0][0]){vtick();seeking=target;stage.classList.add('seeking');$('#seekname').textContent=CHAPTERS.find(c=>c[0]===target)[1];}else endSeek(true);
-  setPaused(false);run(tok).catch(e=>{if(e.message!=='restart')console.error(e)});}
-function endSeek(quiet){const was=seeking;seeking=null;vLast=performance.now();const q=seekQ.splice(0);q.forEach(waitReal);if(was||quiet){void stage.offsetWidth;stage.classList.remove('seeking');}} // flush styles with transitions off, then re-enable them
+function start(target,t,keepPaused){runToken++;const tok=runToken;seekQ.length=0;started=true;
+  if(t>0){vtick();seeking='@time';seekT=t;stage.classList.add('seeking');$('#seekname').textContent=chapterAt(t);}
+  else if(target&&target!==CHAPTERS[0][0]){vtick();seeking=target;stage.classList.add('seeking');$('#seekname').textContent=CHAPTERS.find(c=>c[0]===target)[1];}else endSeek(true);
+  setPaused(!!keepPaused);run(tok).catch(e=>{if(e.message!=='restart')console.error(e)});}
+function endSeek(quiet){const was=seeking,wasT=seekT!=null;seeking=null;seekT=null;vLast=performance.now();const q=seekQ.splice(0);q.forEach(waitReal);if(was||quiet){void stage.offsetWidth;stage.classList.remove('seeking');}if(wasT&&voKey)vo(voKey,Math.max(.01,(vnow()-voT0)/1000));} // flush styles with transitions off, then re-enable them
 function jumpTo(key){voStop();runToken++;started=false;$('#end').classList.remove('on');start(key);}
+// Timeline scrub: restart the run and fast-forward to ms. A paused run stays paused.
+function seekTo(ms){const keep=started&&paused;ms=Math.max(0,Math.min(RUN_MS-1000,ms));voStop();runToken++;started=false;$('#end').classList.remove('on');start(null,ms,keep);}
+
+/* timeline: yellow fill + playhead, chapter ticks, hover tooltip (time + chapter); drag and release to seek */
+{const sc=$('#scrub'),tip=$('#scrubtip');let drag=false,dragT=0,lastLbl='';
+  $('.ticks',sc).innerHTML=CHAPTERS.slice(1).map(([k])=>`<i style="left:${CH_MS[k]/RUN_MS*100}%"></i>`).join('');
+  const tAt=x=>{const r=sc.getBoundingClientRect();return Math.max(0,Math.min(1,(x-r.left)/r.width))*RUN_MS;};
+  const showTip=t=>{const r=sc.getBoundingClientRect(),x=t/RUN_MS*r.width;tip.innerHTML=`<b>${fmt(t)}</b>${chapterAt(t)}`;const w=tip.offsetWidth;tip.style.left=Math.max(w/2-14,Math.min(r.width-w/2+14,x))+'px';$('.hov',sc).style.width=x+'px';sc.classList.add('tipon');};
+  sc.addEventListener('pointermove',e=>{if(drag)dragT=tAt(e.clientX);showTip(drag?dragT:tAt(e.clientX));});
+  sc.addEventListener('pointerleave',()=>{if(!drag)sc.classList.remove('tipon');});
+  sc.addEventListener('pointerdown',e=>{if(e.button)return;e.preventDefault();sc.setPointerCapture(e.pointerId);drag=true;dragT=tAt(e.clientX);sc.classList.add('drag');showTip(dragT);});
+  const up=e=>{if(!drag)return;drag=false;sc.classList.remove('drag');if(!sc.matches(':hover'))sc.classList.remove('tipon');seekTo(dragT);};
+  sc.addEventListener('pointerup',up);sc.addEventListener('pointercancel',up);
+  sc.addEventListener('keydown',e=>{const d={ArrowLeft:-5000,ArrowRight:5000}[e.key];if(!d)return;e.preventDefault();seekTo((seekT!=null?seekT:vnow())+d);});
+  const draw=()=>{const now=seekT!=null?seekT:(started?vnow():vAcc),t=drag?dragT:now,pc=Math.min(100,t/RUN_MS*100)+'%';
+    $('#prog').style.width=pc;$('#head').style.left=pc;
+    const lbl=`${fmt(now)} / ${fmt(RUN_MS)}`+(chIdx>=0?` \u00b7 ${chIdx+1} of ${CHAPTERS.length}`:'');if(lbl!==lastLbl){lastLbl=lbl;$('#timelbl').textContent=lbl;sc.setAttribute('aria-valuenow',Math.round(now/1000));sc.setAttribute('aria-valuetext',`${fmt(now)}, ${chapterAt(now)}`);}
+    requestAnimationFrame(draw);};
+  sc.setAttribute('aria-valuemax',Math.round(RUN_MS/1000));draw();}
 $('#play').onclick=()=>{if(!started){start();return}setPaused(!paused);};
 $('#restart').onclick=()=>jumpTo(CHAPTERS[0][0]);
 $$('#speed button').forEach(b=>b.onclick=()=>setSpeed(+b.dataset.v));
